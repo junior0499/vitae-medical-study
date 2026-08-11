@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-html-link-for-pages */
+
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type StudyTask = {
@@ -87,17 +89,17 @@ export default function Home() {
       <a className="skip-link" href="#main-content">Skip to study dashboard</a>
 
       <aside className="sidebar" aria-label="Primary navigation">
-        <a className="brand" href="#top" aria-label="Vitae home">
+        <a className="brand" href="/" aria-label="Vitae home">
           <span className="brand-mark" aria-hidden="true"><i /><b>V</b></span>
           <span><strong>vitae</strong><small>medical study</small></span>
         </a>
 
         <nav className="side-nav">
-          <a className="active" href="#top"><span aria-hidden="true">⌂</span>Overview</a>
-          <a href="#systems"><span aria-hidden="true">◎</span>Learn</a>
-          <a href="#today"><span aria-hidden="true">↻</span>Recall<b>18</b></a>
+          <a className="active" href="/"><span aria-hidden="true">⌂</span>Overview</a>
+          <a href="/learn"><span aria-hidden="true">◎</span>Learn</a>
+          <a href="/learn/cardiovascular/cardiac-cycle#recall"><span aria-hidden="true">↻</span>Recall<b>18</b></a>
           <a href="#schedule"><span aria-hidden="true">□</span>Planner</a>
-          <a href="#systems"><span aria-hidden="true">▤</span>Library</a>
+          <a href="/library"><span aria-hidden="true">▤</span>Library</a>
         </nav>
 
         <div className="semester-card">
@@ -156,7 +158,7 @@ export default function Home() {
               <h2 id="continue-title">The cardiac cycle,<br />made <em>visual.</em></h2>
               <p>Follow pressure, volume, valves, and heart sounds through one complete heartbeat—then test the connections.</p>
               <div className="hero-actions">
-                <a className="primary-button" href="#today">Resume lesson <span aria-hidden="true">→</span></a>
+                <a className="primary-button" href="/learn/cardiovascular/cardiac-cycle">Resume lesson <span aria-hidden="true">→</span></a>
                 <button className="text-button" type="button" onClick={() => askAtlas("Explain preload simply")}>Ask Atlas first <span aria-hidden="true">↗</span></button>
               </div>
               <div className="source-note"><span aria-hidden="true">✓</span><b>Syllabus-linked</b><i />Last studied yesterday</div>
@@ -190,7 +192,7 @@ export default function Home() {
                   </label>
                 ))}
               </div>
-              <footer><span>About 1 hr 5 min remaining</span><a href="#systems">Adjust plan</a></footer>
+              <footer><span>About 1 hr 5 min remaining</span><a href="/learn">Adjust plan</a></footer>
             </article>
 
             <article id="schedule" className="panel schedule-panel">
@@ -210,7 +212,7 @@ export default function Home() {
           <section id="systems" className="systems-section" aria-labelledby="systems-title">
             <header className="section-header">
               <div><span className="eyebrow">Foundation before disease</span><h2 id="systems-title">Your clinical systems</h2></div>
-              <a href="#top">View syllabus map <span aria-hidden="true">→</span></a>
+              <a href="/learn">View syllabus map <span aria-hidden="true">→</span></a>
             </header>
             <div className="system-grid">
               {systemCards.map((system) => (
@@ -220,7 +222,7 @@ export default function Home() {
                   <h3>{system.title}</h3>
                   <p>{system.detail}</p>
                   <div className={`system-progress system-progress--${system.color}`}><i style={{ width: `${system.progress}%` }} /></div>
-                  <footer><strong>{system.progress}%</strong><button type="button" aria-label={`Open ${system.title}`}>↗</button></footer>
+                  <footer><strong>{system.progress}%</strong><a href={system.code === "CV" ? "/learn/cardiovascular/cardiac-cycle" : "/learn"} aria-label={`Open ${system.title}`}>↗</a></footer>
                 </article>
               ))}
             </div>

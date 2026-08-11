@@ -4,13 +4,13 @@ import test from "node:test";
 
 const templateRoot = new URL("../", import.meta.url);
 
-async function render() {
+async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
+    new Request(`http://localhost${pathname}`, {
       headers: { accept: "text/html" },
     }),
     {
@@ -38,6 +38,46 @@ test("server-renders the Vitae medical study dashboard", async () => {
   assert.match(html, /Atlas · Study companion/);
   assert.match(html, /Medicine, made learnable/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
+});
+
+test("renders the curriculum, Professor Mode lesson, and source library", async () => {
+  const [learnResponse, lessonResponse, libraryResponse] = await Promise.all([
+    render("/learn"),
+    render("/learn/cardiovascular/cardiac-cycle"),
+    render("/library"),
+  ]);
+
+  for (const response of [learnResponse, lessonResponse, libraryResponse]) {
+    assert.equal(response.status, 200);
+  }
+
+  const [learnHtml, lessonHtml, libraryHtml] = await Promise.all([
+    learnResponse.text(), lessonResponse.text(), libraryResponse.text(),
+  ]);
+  assert.match(learnHtml, /Build the body before/);
+  assert.match(learnHtml, /Cardiovascular route/);
+  assert.match(lessonHtml, /Professor Mode/);
+  assert.match(lessonHtml, /Sideways concept map/);
+  assert.match(lessonHtml, /Active recall checkpoint/);
+  assert.match(libraryHtml, /Upload sources/);
+  assert.match(libraryHtml, /Saved by semester/);
+});
+
+test("declares durable progress, notes, and document storage", async () => {
+  const [hostingText, schemaText, migrationText, documentRouteText] = await Promise.all([
+    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0000_dark_exodus.sql", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/documents/route.ts", import.meta.url), "utf8"),
+  ]);
+  const hosting = JSON.parse(hostingText);
+  assert.equal(hosting.d1, "DB");
+  assert.equal(hosting.r2, "DOCUMENTS");
+  assert.match(schemaText, /lessonProgress|lessonNotes|studyDocuments/);
+  assert.match(migrationText, /CREATE TABLE `lesson_progress`/);
+  assert.match(migrationText, /CREATE TABLE `study_documents`/);
+  assert.match(documentRouteText, /MAX_FILES = 5/);
+  assert.match(documentRouteText, /getStudyBucket/);
 });
 
 test("removes the disposable starter and includes production social metadata", async () => {
