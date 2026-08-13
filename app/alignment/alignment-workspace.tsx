@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type SystemKey = "Cardiovascular" | "Respiratory" | "Renal";
 type StatusKey = "strong" | "partial" | "review" | "missing";
@@ -16,6 +16,13 @@ type AlignmentRow = {
   support: string;
   status: StatusKey;
   note: string;
+};
+
+type ReviewDecision = "pending" | "approved" | "changes_requested";
+type AlignmentReview = { alignmentId: string; decision: ReviewDecision; reviewerNote: string; updatedAt: string };
+type ImportedAlignment = {
+  id: string; batchTitle: string; system: string; week: string; topic: string; primarySource: string;
+  pageReference: string; supportSource: string; status: string; note: string; createdAt: string;
 };
 
 const statusLabels: Record<StatusKey, string> = {
@@ -284,9 +291,27 @@ const alignments: AlignmentRow[] = [
 ];
 
 export function AlignmentWorkspace() {
+  const fileRef = useRef<HTMLInputElement>(null);
   const [system, setSystem] = useState<"All" | SystemKey>("All");
   const [status, setStatus] = useState<"all" | StatusKey>("all");
   const [query, setQuery] = useState("");
+  const [reviews, setReviews] = useState<Record<string, AlignmentReview>>({});
+  const [imported, setImported] = useState<ImportedAlignment[]>([]);
+  const [reviewSaving, setReviewSaving] = useState("");
+  const [importTitle, setImportTitle] = useState("Internal Medicine alignment");
+  const [importText, setImportText] = useState("");
+  const [importState, setImportState] = useState<"idle" | "saving" | "success" | "error">("idle");
+  const [importMessage, setImportMessage] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/alignments").then((response) => response.ok ? response.json() : null).then((data) => {
+      if (!active || !data) return;
+      setImported(data.imported ?? []);
+      setReviews(Object.fromEntries((data.reviews ?? []).map((review: AlignmentReview) => [review.alignmentId, review])));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -303,6 +328,57 @@ export function AlignmentWorkspace() {
     return counts;
   }, { strong: 0, partial: 0, review: 0, missing: 0 }), []);
 
+  const approvedCount = Object.values(reviews).filter((review) => review.decision === "approved").length;
+
+  async function saveReview(alignmentId: string, decision: ReviewDecision) {
+    setReviewSaving(alignmentId);
+    try {
+      const response = await fetch("/api/alignments", {
+        method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ alignmentId, decision }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Review could not be saved.");
+      setReviews((current) => ({ ...current, [alignmentId]: data.review }));
+    } catch {
+      setImportState("error"); setImportMessage("The review decision could not be saved. Please try again.");
+    } finally { setReviewSaving(""); }
+  }
+
+  async function importAlignment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!importText.trim()) { setImportState("error"); setImportMessage("Paste a table or choose a CSV, TSV, or text file."); return; }
+    setImportState("saving"); setImportMessage("Checking and saving the alignment rows…");
+    try {
+      const response = await fetch("/api/alignments", {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: importTitle, text: importText }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Import failed.");
+      setImported((current) => [...data.imported, ...current]);
+      setImportText(""); if (fileRef.current) fileRef.current.value = "";
+      setImportState("success"); setImportMessage(`${data.imported.length} alignment ${data.imported.length === 1 ? "row" : "rows"} saved as review drafts.`);
+    } catch (error) {
+      setImportState("error"); setImportMessage(error instanceof Error ? error.message : "The alignment table could not be imported.");
+    }
+  }
+
+  async function readImportFile(file: File | undefined) {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { setImportState("error"); setImportMessage("Use a CSV, TSV, or text alignment file under 2 MB."); return; }
+    setImportText(await file.text());
+    setImportTitle(file.name.replace(/\.(csv|tsv|txt)$/i, "").slice(0, 120) || "Imported alignment");
+    setImportState("idle"); setImportMessage("");
+  }
+
+  function reviewControls(alignmentId: string) {
+    const decision = reviews[alignmentId]?.decision ?? "pending";
+    return <div className="review-controls" aria-label="Review this alignment">
+      <span className={`review-decision review-decision--${decision}`}>{decision === "approved" ? "Approved" : decision === "changes_requested" ? "Needs changes" : "Awaiting review"}</span>
+      <button className={decision === "approved" ? "is-selected" : ""} type="button" disabled={reviewSaving === alignmentId} onClick={() => saveReview(alignmentId, "approved")}>✓ Approve</button>
+      <button className={decision === "changes_requested" ? "is-selected is-change" : ""} type="button" disabled={reviewSaving === alignmentId} onClick={() => saveReview(alignmentId, "changes_requested")}>Flag change</button>
+    </div>;
+  }
+
   return (
     <div className="alignment-page">
       <header className="alignment-hero">
@@ -317,7 +393,7 @@ export function AlignmentWorkspace() {
         </div>
         <div className="alignment-scorecard" aria-label="Alignment summary">
           <span>Alignment prepared</span>
-          <strong>{alignments.length}<small>syllabus topic groups</small></strong>
+          <strong>{alignments.length + imported.length}<small>mapped + imported groups</small></strong>
           <div>
             <span><i className="status-dot status-dot--strong" /><b>{statusCounts.strong}</b><small>strong</small></span>
             <span><i className="status-dot status-dot--partial" /><b>{statusCounts.partial}</b><small>partial</small></span>
@@ -327,11 +403,13 @@ export function AlignmentWorkspace() {
         </div>
       </header>
 
-      <section className="alignment-steps" aria-label="ChatGPT to Vitae source workflow">
+      <section className="alignment-steps alignment-steps--six" aria-label="ChatGPT to Vitae source workflow">
         <article className="is-complete"><span>1</span><div><strong>Syllabus reviewed</strong><small>Objectives, weeks and literature</small></div><b>✓</b></article>
         <article className="is-complete"><span>2</span><div><strong>Books identified</strong><small>Titles, authors and editions</small></div><b>✓</b></article>
         <article className="is-complete"><span>3</span><div><strong>Chapters aligned</strong><small>Verified PDF start pages</small></div><b>✓</b></article>
-        <article className="is-next"><span>4</span><div><strong>Your review</strong><small>Confirm editions and uncertain scope</small></div><b>Next</b></article>
+        <article className={approvedCount ? "is-complete" : "is-next"}><span>4</span><div><strong>Review & approve</strong><small>{approvedCount} decisions approved</small></div><b>{approvedCount ? "✓" : "Now"}</b></article>
+        <article><span>5</span><div><strong>Upload source bundle</strong><small>Syllabus, contents and book sections</small></div><a href="/library">Open</a></article>
+        <article className={imported.length ? "is-complete" : "is-next"}><span>6</span><div><strong>Import alignment</strong><small>Paste a table or choose a file</small></div><a href="#alignment-import">{imported.length ? "✓" : "Open"}</a></article>
       </section>
 
       <aside className="identity-warning" aria-labelledby="identity-warning-title">
@@ -339,6 +417,29 @@ export function AlignmentWorkspace() {
         <div><strong id="identity-warning-title">Course identity needs confirmation</strong><p>The filename says “Internal medicine 1,” the document title says “Internal Medicine IV,” its objective mentions seventh-semester students, and the semester grid appears to mark Semester IX. The clinical topic map remains usable, but Vitae will not silently assign the wrong official semester.</p></div>
         <span>Needs review</span>
       </aside>
+
+      <section id="alignment-import" className="alignment-import" aria-labelledby="alignment-import-title">
+        <div className="import-copy"><span className="eyebrow">Step 6 · Bring in a ChatGPT plan</span><h2 id="alignment-import-title">Paste or import an alignment table.</h2><p>Use CSV, TSV, plain text, or a Markdown table. Vitae stores every imported row as a draft until you approve it.</p><div><strong>Required columns</strong><span>Topic</span><span>Primary source or chapter</span><small>Optional: system, week, pages, support, status, note</small></div></div>
+        <form onSubmit={importAlignment}>
+          <label><span>Alignment name</span><input value={importTitle} onChange={(event) => setImportTitle(event.target.value)} maxLength={120} /></label>
+          <label className="import-file"><span>Choose CSV, TSV, or text</span><input ref={fileRef} type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" onChange={(event) => readImportFile(event.target.files?.[0])} /></label>
+          <label><span>Or paste the table</span><textarea value={importText} onChange={(event) => setImportText(event.target.value)} placeholder={"System | Week | Topic | Primary source | Pages | Status | Note\nCardiovascular | I | Heart failure | HPIM 21e Ch. 257 | PDF p.1971 | Strong match | Verify edition"} /></label>
+          {importMessage ? <p className={`import-message import-message--${importState}`} role="status">{importMessage}</p> : null}
+          <button type="submit" disabled={importState === "saving"}>{importState === "saving" ? "Importing…" : "Import as review drafts"}<span>→</span></button>
+        </form>
+      </section>
+
+      {imported.length ? <section className="imported-alignments" aria-labelledby="imported-alignments-title">
+        <header className="section-header"><div><span className="eyebrow">Imported drafts</span><h2 id="imported-alignments-title">Your imported alignment rows</h2></div><span>{imported.length} awaiting or reviewed</span></header>
+        <div className="alignment-list">
+          {imported.map((item) => <article className="alignment-row" key={item.id}>
+            <div className="alignment-week"><span>{item.system}</span><strong>{item.week ? `Week ${item.week}` : "Imported"}</strong><small>{item.batchTitle}</small></div>
+            <div className="alignment-topic"><span className="alignment-status alignment-status--review"><i />{item.status.replaceAll("_", " ")}</span><h3>{item.topic}</h3><p>{item.note || "Imported from your alignment plan. Review before use."}</p></div>
+            <div className="alignment-source"><span>Proposed source</span><strong>{item.primarySource}</strong><small>{item.pageReference || "Page not supplied"}</small></div>
+            <div className="alignment-support"><span>Support / review</span><p>{item.supportSource || "No supporting source supplied."}</p>{reviewControls(item.id)}</div>
+          </article>)}
+        </div>
+      </section> : null}
 
       <section className="source-inventory" aria-labelledby="source-inventory-title">
         <header className="section-header"><div><span className="eyebrow">Available textbook set</span><h2 id="source-inventory-title">Sources used for this map</h2></div><a href="/library">Manage sources →</a></header>
@@ -381,7 +482,7 @@ export function AlignmentWorkspace() {
               <div className="alignment-week"><span>{item.system}</span><strong>Week {item.week}</strong><small>Topic {item.number}</small></div>
               <div className="alignment-topic"><span className={`alignment-status alignment-status--${item.status}`}><i />{statusLabels[item.status]}</span><h3>{item.topic}</h3><p>{item.note}</p></div>
               <div className="alignment-source"><span>Start here</span><strong>{item.primary}</strong><small>{item.pages}</small></div>
-              <div className="alignment-support"><span>Support / decision</span><p>{item.support}</p></div>
+              <div className="alignment-support"><span>Support / review</span><p>{item.support}</p>{reviewControls(item.id)}</div>
             </article>
           ))}
           {!filtered.length ? <div className="alignment-empty"><span>⌕</span><strong>No matching topics</strong><p>Try another system, status, or search phrase.</p></div> : null}
@@ -389,7 +490,7 @@ export function AlignmentWorkspace() {
       </section>
 
       <section className="alignment-next-step">
-        <span aria-hidden="true">✓</span><div><strong>The first three steps are now inside Vitae.</strong><p>The syllabus, book metadata and chapter alignment are connected. Your next decision is to confirm the course identity and approve the edition substitutions before source-locked lessons are generated.</p></div><a href="#identity-warning-title">Review open checks</a>
+        <span aria-hidden="true">✓</span><div><strong>Steps 4–6 are ready.</strong><p>Approve individual mappings, upload the supporting source bundle, and import future ChatGPT alignment tables as private review drafts.</p></div><a href="/library">Upload source bundle</a>
       </section>
     </div>
   );

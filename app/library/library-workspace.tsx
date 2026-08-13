@@ -12,6 +12,7 @@ type StudyDocument = {
   sizeBytes: number;
   status: string;
   createdAt: string;
+  sourceDetails: { bookTitle: string; bookEdition: string; sectionLabel: string; pageRange: string } | null;
 };
 
 const subjects = ["Internal Medicine", "Perioperative Medicine", "Women & Child Health", "Foundations", "Other"];
@@ -28,6 +29,10 @@ export function LibraryWorkspace() {
   const [semester, setSemester] = useState("7");
   const [subject, setSubject] = useState(subjects[0]);
   const [category, setCategory] = useState("Textbook");
+  const [bookTitle, setBookTitle] = useState("");
+  const [bookEdition, setBookEdition] = useState("");
+  const [sectionLabel, setSectionLabel] = useState("");
+  const [pageRange, setPageRange] = useState("");
   const [state, setState] = useState<"idle" | "uploading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
@@ -62,6 +67,10 @@ export function LibraryWorkspace() {
     setState("uploading"); setMessage("Uploading and organizing your sources…");
     const form = new FormData();
     form.set("semester", semester); form.set("subject", subject); form.set("category", category);
+    if (category === "Book section") {
+      form.set("bookTitle", bookTitle); form.set("bookEdition", bookEdition);
+      form.set("sectionLabel", sectionLabel); form.set("pageRange", pageRange);
+    }
     files.forEach((file) => form.append("files", file));
     try {
       const response = await fetch("/api/documents", { method: "POST", body: form });
@@ -94,11 +103,17 @@ export function LibraryWorkspace() {
           <div className="source-fields">
             <label><span>Semester</span><select value={semester} onChange={(event) => setSemester(event.target.value)}>{Array.from({ length: 7 }, (_, index) => <option value={index + 1} key={index + 1}>Semester {index + 1}</option>)}</select></label>
             <label><span>Subject</span><select value={subject} onChange={(event) => setSubject(event.target.value)}>{subjects.map((item) => <option key={item}>{item}</option>)}</select></label>
-            <label><span>Source type</span><select value={category} onChange={(event) => setCategory(event.target.value)}>{["Textbook", "Syllabus", "Lecture notes", "Guideline"].map((item) => <option key={item}>{item}</option>)}</select></label>
+            <label><span>Source type</span><select value={category} onChange={(event) => setCategory(event.target.value)}>{["Textbook", "Book section", "Syllabus", "Alignment plan", "Table of contents", "Lecture notes", "Guideline"].map((item) => <option key={item}>{item}</option>)}</select></label>
           </div>
+          {category === "Book section" ? <div className="book-section-fields">
+            <label><span>Book title</span><input value={bookTitle} onChange={(event) => setBookTitle(event.target.value)} placeholder="e.g. Harrison’s Principles" required /></label>
+            <label><span>Edition</span><input value={bookEdition} onChange={(event) => setBookEdition(event.target.value)} placeholder="e.g. 21st" /></label>
+            <label><span>Chapter or section</span><input value={sectionLabel} onChange={(event) => setSectionLabel(event.target.value)} placeholder="e.g. Chapter 257 · Heart failure" required /></label>
+            <label><span>Printed page range</span><input value={pageRange} onChange={(event) => setPageRange(event.target.value)} placeholder="Optional" /></label>
+          </div> : null}
           <label className="drop-zone" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); acceptFiles(event.dataTransfer.files); }}>
-            <input ref={inputRef} type="file" multiple accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => acceptFiles(event.target.files)} />
-            <span aria-hidden="true">⇧</span><strong>Drop your books or syllabi here</strong><p>or choose files from your device</p><small>PDF or Word · up to 5 files · 25 MB each</small>
+            <input ref={inputRef} type="file" multiple accept=".pdf,.doc,.docx,.csv,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/csv,text/plain" onChange={(event) => acceptFiles(event.target.files)} />
+            <span aria-hidden="true">⇧</span><strong>Drop your learning sources here</strong><p>syllabus, alignment, contents, or selected book sections</p><small>PDF, Word, CSV, or text · up to 5 files · 25 MB each</small>
           </label>
           {files.length ? <div className="selected-files">{files.map((file) => <div key={`${file.name}-${file.size}`}><span>{file.type === "application/pdf" ? "PDF" : "DOC"}</span><p><strong>{file.name}</strong><small>{formatBytes(file.size)}</small></p><button type="button" onClick={() => setFiles((current) => current.filter((item) => item !== file))} aria-label={`Remove ${file.name}`}>×</button></div>)}</div> : null}
           {message ? <p className={`upload-message upload-message--${state}`} role="status">{message}</p> : null}
@@ -107,7 +122,7 @@ export function LibraryWorkspace() {
 
         <aside className="source-flow-card">
           <span className="eyebrow">How Vitae uses sources</span><h2>Your material stays traceable.</h2>
-          <ol><li><span>1</span><div><strong>Organize</strong><p>Semester, subject, and source type stay attached.</p></div></li><li><span>2</span><div><strong>Connect</strong><p>Lessons can point back to the right material.</p></div></li><li><span>3</span><div><strong>Teach clearly</strong><p>Source material and professor explanation remain visibly separate.</p></div></li></ol>
+          <ol><li><span>1</span><div><strong>Upload the syllabus</strong><p>Keep the official learning requirements.</p></div></li><li><span>2</span><div><strong>Add the alignment & contents</strong><p>Preserve the approved chapter plan.</p></div></li><li><span>3</span><div><strong>Add selected book sections</strong><p>Attach title, edition, chapter and pages.</p></div></li></ol>
           <div><span aria-hidden="true">⌁</span><p><strong>Current capability</strong>The Internal Medicine syllabus now has a manually verified chapter map. Automatic extraction and page-level lesson citations remain a later source-processing stage.</p></div>
           <a className="source-map-link" href="/alignment">Review the chapter map <span>→</span></a>
         </aside>
@@ -115,7 +130,7 @@ export function LibraryWorkspace() {
 
       <section className="document-library" aria-labelledby="saved-sources-title">
         <header className="section-header"><div><span className="eyebrow">Saved by semester</span><h2 id="saved-sources-title">Your sources</h2></div><span>{documents.length ? "Open any original source" : "Your uploaded sources will appear here"}</span></header>
-        {grouped.length ? grouped.map(([groupSemester, items]) => <div className="semester-group" key={groupSemester}><header><strong>Semester {groupSemester}</strong><span>{items.length} {items.length === 1 ? "source" : "sources"}</span></header><div>{items.map((document) => <article key={document.id}><span className={`document-type ${document.contentType === "application/pdf" ? "document-type--pdf" : ""}`}>{document.contentType === "application/pdf" ? "PDF" : "DOC"}</span><div><strong>{document.filename}</strong><p>{document.subject} · {document.category} · {formatBytes(document.sizeBytes)}</p></div><span>{new Date(document.createdAt).toLocaleDateString("en", { day: "numeric", month: "short" })}</span><a href={`/api/documents/${document.id}`} target="_blank" rel="noreferrer">Open ↗</a></article>)}</div></div>) : <div className="empty-library"><span>▤</span><h3>Your library is ready.</h3><p>Add the first syllabus or textbook above. It will be saved privately and organized by semester.</p></div>}
+        {grouped.length ? grouped.map(([groupSemester, items]) => <div className="semester-group" key={groupSemester}><header><strong>Semester {groupSemester}</strong><span>{items.length} {items.length === 1 ? "source" : "sources"}</span></header><div>{items.map((document) => <article key={document.id}><span className={`document-type ${document.contentType === "application/pdf" ? "document-type--pdf" : ""}`}>{document.contentType === "application/pdf" ? "PDF" : document.contentType.includes("csv") || document.contentType === "text/plain" ? "TXT" : "DOC"}</span><div><strong>{document.filename}</strong><p>{document.subject} · {document.category} · {formatBytes(document.sizeBytes)}</p>{document.sourceDetails ? <small className="document-book-detail">{document.sourceDetails.bookTitle}{document.sourceDetails.bookEdition ? ` · ${document.sourceDetails.bookEdition}` : ""} · {document.sourceDetails.sectionLabel}{document.sourceDetails.pageRange ? ` · pp. ${document.sourceDetails.pageRange}` : ""}</small> : null}</div><span>{new Date(document.createdAt).toLocaleDateString("en", { day: "numeric", month: "short" })}</span><a href={`/api/documents/${document.id}`} target="_blank" rel="noreferrer">Open ↗</a></article>)}</div></div>) : <div className="empty-library"><span>▤</span><h3>Your library is ready.</h3><p>Add the first syllabus or textbook above. It will be saved privately and organized by semester.</p></div>}
       </section>
     </div>
   );

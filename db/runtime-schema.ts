@@ -51,6 +51,46 @@ export function ensureVitaeSchema() {
       ON study_documents(owner_id, created_at)`),
     database.prepare(`CREATE INDEX IF NOT EXISTS idx_study_documents_owner_semester
       ON study_documents(owner_id, semester)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS document_source_details (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      document_id TEXT NOT NULL,
+      book_title TEXT DEFAULT '' NOT NULL,
+      book_edition TEXT DEFAULT '' NOT NULL,
+      section_label TEXT DEFAULT '' NOT NULL,
+      page_range TEXT DEFAULT '' NOT NULL,
+      created_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_document_source_details_owner_document
+      ON document_source_details(owner_id, document_id)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS alignment_reviews (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      alignment_id TEXT NOT NULL,
+      decision TEXT DEFAULT 'pending' NOT NULL,
+      reviewer_note TEXT DEFAULT '' NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_alignment_reviews_owner_alignment
+      ON alignment_reviews(owner_id, alignment_id)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_alignment_reviews_owner_decision
+      ON alignment_reviews(owner_id, decision)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS imported_alignments (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      batch_title TEXT NOT NULL,
+      system TEXT NOT NULL,
+      week TEXT DEFAULT '' NOT NULL,
+      topic TEXT NOT NULL,
+      primary_source TEXT NOT NULL,
+      page_reference TEXT DEFAULT '' NOT NULL,
+      support_source TEXT DEFAULT '' NOT NULL,
+      status TEXT DEFAULT 'needs_review' NOT NULL,
+      note TEXT DEFAULT '' NOT NULL,
+      created_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_imported_alignments_owner_created
+      ON imported_alignments(owner_id, created_at)`),
     database.prepare("PRAGMA optimize"),
   ]).then(() => undefined).catch((error) => {
     schemaPromise = null;

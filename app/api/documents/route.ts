@@ -1,7 +1,7 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { ensureVitaeSchema, getStudyBucket } from "@/db/runtime-schema";
-import { studyDocuments } from "@/db/schema";
+import { documentSourceDetails, studyDocuments } from "@/db/schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
@@ -10,6 +10,11 @@ const allowedTypes = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/msword",
+  "text/csv",
+  "text/plain",
+]);
+const allowedCategories = new Set([
+  "Textbook", "Book section", "Syllabus", "Alignment plan", "Table of contents", "Lecture notes", "Guideline",
 ]);
 
 export async function GET(request: Request) {
@@ -30,7 +35,11 @@ export async function GET(request: Request) {
       createdAt: studyDocuments.createdAt,
     }).from(studyDocuments).where(eq(studyDocuments.ownerId, ownerId))
       .orderBy(desc(studyDocuments.createdAt));
-    return Response.json({ documents: rows });
+    const details = rows.length ? await getDb().select().from(documentSourceDetails).where(
+      inArray(documentSourceDetails.documentId, rows.map((row) => row.id)),
+    ) : [];
+    const byDocument = new Map(details.map((detail) => [detail.documentId, detail]));
+    return Response.json({ documents: rows.map((row) => ({ ...row, sourceDetails: byDocument.get(row.id) ?? null })) });
   } catch {
     return Response.json({ error: "Your library could not be loaded." }, { status: 500 });
   }
@@ -45,17 +54,24 @@ export async function POST(request: Request) {
     const semester = Number(form.get("semester"));
     const subject = String(form.get("subject") ?? "").trim();
     const category = String(form.get("category") ?? "").trim();
+    const bookTitle = String(form.get("bookTitle") ?? "").trim().slice(0, 180);
+    const bookEdition = String(form.get("bookEdition") ?? "").trim().slice(0, 80);
+    const sectionLabel = String(form.get("sectionLabel") ?? "").trim().slice(0, 180);
+    const pageRange = String(form.get("pageRange") ?? "").trim().slice(0, 80);
     const files = form.getAll("files").filter((value): value is File => value instanceof File);
 
-    if (!Number.isInteger(semester) || semester < 1 || semester > 7 || !subject || !category) {
+    if (!Number.isInteger(semester) || semester < 1 || semester > 7 || !subject || !allowedCategories.has(category)) {
       return Response.json({ error: "Choose a semester, subject, and source type." }, { status: 400 });
+    }
+    if (category === "Book section" && (!bookTitle || !sectionLabel)) {
+      return Response.json({ error: "Add the book title and chapter or section name." }, { status: 400 });
     }
     if (!files.length || files.length > MAX_FILES) {
       return Response.json({ error: `Choose between 1 and ${MAX_FILES} files.` }, { status: 400 });
     }
     const invalid = files.find((file) => file.size <= 0 || file.size > MAX_FILE_SIZE || !allowedTypes.has(file.type));
     if (invalid) {
-      return Response.json({ error: `${invalid.name} must be a PDF or Word file under 25 MB.` }, { status: 400 });
+      return Response.json({ error: `${invalid.name} must be a PDF, Word, CSV, or text file under 25 MB.` }, { status: 400 });
     }
 
     await ensureVitaeSchema();
@@ -79,7 +95,14 @@ export async function POST(request: Request) {
 
     try {
       await getDb().insert(studyDocuments).values(uploaded);
+      if (category === "Book section") {
+        await getDb().insert(documentSourceDetails).values(uploaded.map((document) => ({
+          id: crypto.randomUUID(), ownerId, documentId: document.id, bookTitle, bookEdition,
+          sectionLabel, pageRange, createdAt: now,
+        })));
+      }
     } catch (error) {
+      if (uploaded.length) await getDb().delete(studyDocuments).where(inArray(studyDocuments.id, uploaded.map((document) => document.id)));
       await Promise.all(uploaded.map((document) => bucket.delete(document.objectKey)));
       throw error;
     }
@@ -94,6 +117,7 @@ export async function POST(request: Request) {
       sizeBytes: document.sizeBytes,
       status: document.status,
       createdAt: document.createdAt,
+      sourceDetails: category === "Book section" ? { bookTitle, bookEdition, sectionLabel, pageRange } : null,
     })) }, { status: 201 });
   } catch {
     return Response.json({ error: "The files could not be uploaded. Please try again." }, { status: 500 });

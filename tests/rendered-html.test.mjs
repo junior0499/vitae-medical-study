@@ -61,30 +61,44 @@ test("renders the curriculum, source alignment, Professor Mode lesson, and sourc
   assert.match(alignmentHtml, /Every topic now has/);
   assert.match(alignmentHtml, /Course identity needs confirmation/);
   assert.match(alignmentHtml, /Foundation-first source bridge/);
+  assert.match(alignmentHtml, /Review &amp; approve/);
+  assert.match(alignmentHtml, /Paste or import an alignment table/);
+  assert.match(alignmentHtml, /Import as review drafts/);
   assert.match(alignmentHtml, /Acute bronchitis/);
   assert.match(alignmentHtml, /No direct source/);
   assert.match(lessonHtml, /Professor Mode/);
   assert.match(lessonHtml, /Sideways concept map/);
   assert.match(lessonHtml, /Active recall checkpoint/);
   assert.match(libraryHtml, /Upload sources/);
+  assert.match(libraryHtml, /Book section/);
+  assert.match(libraryHtml, /Alignment plan/);
+  assert.match(libraryHtml, /Table of contents/);
   assert.match(libraryHtml, /Saved by semester/);
 });
 
 test("declares durable progress, notes, and document storage", async () => {
-  const [hostingText, schemaText, migrationText, documentRouteText] = await Promise.all([
+  const [hostingText, schemaText, migrationText, alignmentMigrationText, documentRouteText, alignmentRouteText] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0000_dark_exodus.sql", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0001_ancient_ulik.sql", import.meta.url), "utf8"),
     readFile(new URL("../app/api/documents/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/alignments/route.ts", import.meta.url), "utf8"),
   ]);
   const hosting = JSON.parse(hostingText);
   assert.equal(hosting.d1, "DB");
   assert.equal(hosting.r2, "DOCUMENTS");
-  assert.match(schemaText, /lessonProgress|lessonNotes|studyDocuments/);
+  assert.match(schemaText, /lessonProgress|lessonNotes|studyDocuments|alignmentReviews|importedAlignments|documentSourceDetails/);
   assert.match(migrationText, /CREATE TABLE `lesson_progress`/);
   assert.match(migrationText, /CREATE TABLE `study_documents`/);
+  assert.match(alignmentMigrationText, /CREATE TABLE `alignment_reviews`/);
+  assert.match(alignmentMigrationText, /CREATE TABLE `imported_alignments`/);
+  assert.match(alignmentMigrationText, /CREATE TABLE `document_source_details`/);
   assert.match(documentRouteText, /MAX_FILES = 5/);
   assert.match(documentRouteText, /getStudyBucket/);
+  assert.match(documentRouteText, /Book section/);
+  assert.match(alignmentRouteText, /parseAlignmentTable/);
+  assert.match(alignmentRouteText, /changes_requested/);
 });
 
 test("removes the disposable starter and includes production social metadata", async () => {
