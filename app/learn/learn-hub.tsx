@@ -52,7 +52,7 @@ export function LearnHub() {
           <span className="eyebrow"><i /> Foundation-first pathway</span>
           <h1>Build the body before<br />you treat the disease.</h1>
           <p>Move through normal anatomy and physiology in a deliberate sequence. Every lesson ends with recall, notes, and a clinical connection.</p>
-          <div className="learn-hero-actions"><a className="primary-button primary-button--dark" href="/learn/cardiovascular/cardiac-cycle">Continue cardiac cycle <span>→</span></a><a href="/library">Attach a source</a></div>
+          <div className="learn-hero-actions"><a className="primary-button primary-button--dark" href="/learn/cardiovascular/cardiac-cycle">Continue cardiac cycle <span>→</span></a><a href="/alignment">Review source map</a></div>
         </div>
         <div className="route-summary">
           <span>Your learning route</span>
@@ -71,6 +71,8 @@ export function LearnHub() {
           ))}
         </div>
       </section>
+
+      <section className="coming-next source-map-promo"><span aria-hidden="true">⌁</span><div><strong>30 syllabus topic groups are now connected to your books.</strong><p>See the recommended chapter, verified PDF starting page, supporting sources, and every open edition check.</p></div><a href="/alignment">Open source map</a></section>
 
       <section className="system-curriculum" aria-labelledby="curriculum-title">
         <header className="section-header"><div><span className="eyebrow">System curriculum</span><h2 id="curriculum-title">Choose a clinical system</h2></div><a href="/library">Manage sources →</a></header>

@@ -40,22 +40,29 @@ test("server-renders the Vitae medical study dashboard", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
 
-test("renders the curriculum, Professor Mode lesson, and source library", async () => {
-  const [learnResponse, lessonResponse, libraryResponse] = await Promise.all([
+test("renders the curriculum, source alignment, Professor Mode lesson, and source library", async () => {
+  const [learnResponse, alignmentResponse, lessonResponse, libraryResponse] = await Promise.all([
     render("/learn"),
+    render("/alignment"),
     render("/learn/cardiovascular/cardiac-cycle"),
     render("/library"),
   ]);
 
-  for (const response of [learnResponse, lessonResponse, libraryResponse]) {
+  for (const response of [learnResponse, alignmentResponse, lessonResponse, libraryResponse]) {
     assert.equal(response.status, 200);
   }
 
-  const [learnHtml, lessonHtml, libraryHtml] = await Promise.all([
-    learnResponse.text(), lessonResponse.text(), libraryResponse.text(),
+  const [learnHtml, alignmentHtml, lessonHtml, libraryHtml] = await Promise.all([
+    learnResponse.text(), alignmentResponse.text(), lessonResponse.text(), libraryResponse.text(),
   ]);
   assert.match(learnHtml, /Build the body before/);
   assert.match(learnHtml, /Cardiovascular route/);
+  assert.match(learnHtml, /30 syllabus topic groups/);
+  assert.match(alignmentHtml, /Every topic now has/);
+  assert.match(alignmentHtml, /Course identity needs confirmation/);
+  assert.match(alignmentHtml, /Foundation-first source bridge/);
+  assert.match(alignmentHtml, /Acute bronchitis/);
+  assert.match(alignmentHtml, /No direct source/);
   assert.match(lessonHtml, /Professor Mode/);
   assert.match(lessonHtml, /Sideways concept map/);
   assert.match(lessonHtml, /Active recall checkpoint/);

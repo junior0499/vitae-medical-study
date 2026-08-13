@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-html-link-for-pages */
 
 type VitaeFrameProps = {
-  active: "overview" | "learn" | "library";
+  active: "overview" | "learn" | "alignment" | "library";
   title: string;
   subtitle: string;
   children: React.ReactNode;
@@ -10,6 +10,7 @@ type VitaeFrameProps = {
 const navItems = [
   { id: "overview", href: "/", icon: "⌂", label: "Overview" },
   { id: "learn", href: "/learn", icon: "◎", label: "Learn" },
+  { id: "alignment", href: "/alignment", icon: "⌁", label: "Source map" },
   { id: "recall", href: "/learn/cardiovascular/cardiac-cycle#recall", icon: "↻", label: "Recall", badge: "5" },
   { id: "planner", href: "/#schedule", icon: "□", label: "Planner" },
   { id: "library", href: "/library", icon: "▤", label: "Library" },

@@ -108,7 +108,8 @@ export function LibraryWorkspace() {
         <aside className="source-flow-card">
           <span className="eyebrow">How Vitae uses sources</span><h2>Your material stays traceable.</h2>
           <ol><li><span>1</span><div><strong>Organize</strong><p>Semester, subject, and source type stay attached.</p></div></li><li><span>2</span><div><strong>Connect</strong><p>Lessons can point back to the right material.</p></div></li><li><span>3</span><div><strong>Teach clearly</strong><p>Source material and professor explanation remain visibly separate.</p></div></li></ol>
-          <div><span aria-hidden="true">⌁</span><p><strong>Current capability</strong>Files are securely stored and organized. Automatic extraction and page-level lesson citations will be added in the next source-processing stage.</p></div>
+          <div><span aria-hidden="true">⌁</span><p><strong>Current capability</strong>The Internal Medicine syllabus now has a manually verified chapter map. Automatic extraction and page-level lesson citations remain a later source-processing stage.</p></div>
+          <a className="source-map-link" href="/alignment">Review the chapter map <span>→</span></a>
         </aside>
       </section>
 

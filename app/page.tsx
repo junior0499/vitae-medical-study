@@ -97,6 +97,7 @@ export default function Home() {
         <nav className="side-nav">
           <a className="active" href="/"><span aria-hidden="true">⌂</span>Overview</a>
           <a href="/learn"><span aria-hidden="true">◎</span>Learn</a>
+          <a href="/alignment"><span aria-hidden="true">⌁</span>Source map</a>
           <a href="/learn/cardiovascular/cardiac-cycle#recall"><span aria-hidden="true">↻</span>Recall<b>18</b></a>
           <a href="#schedule"><span aria-hidden="true">□</span>Planner</a>
           <a href="/library"><span aria-hidden="true">▤</span>Library</a>
