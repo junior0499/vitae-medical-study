@@ -52,7 +52,10 @@ export const learningGraph = [
   { id: "diagnostic", lane: "Measure", title: "Starting diagnostic", detail: "Domain scores reveal what can be skipped and what needs repair.", href: "/diagnostic" },
   { id: "case", lane: "Apply", title: "Progressive clinical case", detail: "Decisions unfold one step at a time and stay inside approved scope.", href: "/cases" },
   { id: "visual", lane: "Interpret", title: "Visual laboratory", detail: "Pressure and flow patterns train visual interpretation.", href: "/visual-lab" },
+  { id: "interleave", lane: "Mix", title: "Interleaved review", detail: "Related domains alternate so the learner must choose the mechanism.", href: "/interleaved" },
+  { id: "viva", lane: "Explain", title: "Oral viva", detail: "Spoken or typed explanations expose missing concept links.", href: "/viva" },
+  { id: "confidence", lane: "Calibrate", title: "Confidence calibration", detail: "Accuracy and certainty reveal hidden high-confidence errors.", href: "/confidence" },
+  { id: "blueprint", lane: "Plan", title: "Exam blueprint", detail: "Syllabus objectives connect to MCQ, SAQ, OSCE, and viva lanes.", href: "/exam-blueprint" },
   { id: "correction", lane: "Correct", title: "Mistake and review loop", detail: "Incorrect concepts enter the notebook and scheduled recall queue.", href: "/mistakes" },
   { id: "mastery", lane: "Decide", title: "Evidence-based mastery", detail: "The next-best-action engine chooses the highest-value next step.", href: "/learn" },
 ];
-

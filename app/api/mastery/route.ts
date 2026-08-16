@@ -52,6 +52,8 @@ export async function GET(request: Request) {
         diagnosticAttempts: activities.filter((item) => item.activityType === "diagnostic").length,
         caseAttempts: activities.filter((item) => item.activityType === "clinical_case").length,
         visualLabAttempts: activities.filter((item) => item.activityType === "visual_lab").length,
+        vivaAttempts: activities.filter((item) => item.activityType === "oral_viva").length,
+        interleavedAttempts: activities.filter((item) => item.activityType === "interleaved_review").length,
         reviewCards: reviews.length,
         openMistakes: mistakes.filter((item) => item.status === "open").length,
       },

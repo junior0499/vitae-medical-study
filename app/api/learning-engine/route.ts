@@ -8,7 +8,7 @@ import { learningGraph } from "@/lib/learning-engine";
 type Recommendation = { kind: string; eyebrow: string; title: string; reason: string; href: string; action: string };
 
 function parseDetails(value: string) {
-  try { return JSON.parse(value) as { domainScores?: Record<string, number> }; } catch { return {}; }
+  try { return JSON.parse(value) as { domainScores?: Record<string, number>; confidence?: Record<string, string>; results?: Array<{ questionId: string; correct: boolean }> }; } catch { return {}; }
 }
 
 export async function GET(request: Request) {
@@ -27,6 +27,12 @@ export async function GET(request: Request) {
     const diagnostics = activities.filter((item) => item.activityType === "diagnostic").sort((a, b) => b.completedAt.localeCompare(a.completedAt));
     const cases = activities.filter((item) => item.activityType === "clinical_case");
     const visuals = activities.filter((item) => item.activityType === "visual_lab");
+    const interleaved = activities.filter((item) => item.activityType === "interleaved_review");
+    const vivas = activities.filter((item) => item.activityType === "oral_viva");
+    const highConfidenceWrong = interleaved.reduce((count, item) => {
+      const details = parseDetails(item.detailsJson);
+      return count + (details.results ?? []).filter((result) => !result.correct && details.confidence?.[result.questionId] === "high").length;
+    }, 0);
     const openMistakes = mistakes.filter((item) => item.status === "open");
     const dueReviews = reviews.filter((item) => item.dueAt <= new Date().toISOString());
     const cycle = progress.find((item) => item.lessonSlug === "cardiac-cycle");
@@ -43,6 +49,9 @@ export async function GET(request: Request) {
     else if (output?.status !== "complete") recommendation = { kind: "lesson", eyebrow: "Complete the prerequisite", title: "Finish cardiac output", reason: "Forward-flow cases require the HR × SV relationship and stroke-volume determinants.", href: "/learn/cardiovascular/cardiac-output", action: "Continue lesson" };
     else if (!cases.length) recommendation = { kind: "case", eyebrow: "Apply the foundations", title: "Work through a progressive case", reason: "Your current evidence supports moving from isolated concepts to sequential clinical reasoning.", href: "/cases", action: "Open case" };
     else if (!visuals.length) recommendation = { kind: "visual", eyebrow: "Train pattern recognition", title: "Enter the visual interpretation lab", reason: "You have lesson and case evidence; now practise reading pressure and flow patterns.", href: "/visual-lab", action: "Open visual lab" };
+    else if (!interleaved.length) recommendation = { kind: "interleaved", eyebrow: "Make memory choose", title: "Mix cardiac cycle with cardiac output", reason: "You have isolated application evidence. Interleaving now tests whether you can select the right mechanism without a chapter cue.", href: "/interleaved", action: "Start mixed review" };
+    else if (highConfidenceWrong) recommendation = { kind: "confidence", eyebrow: "Hidden certainty risk", title: `Correct ${highConfidenceWrong} confident ${highConfidenceWrong === 1 ? "error" : "errors"}`, reason: "A confident incorrect answer has higher correction priority than more new questions.", href: "/confidence", action: "Calibrate confidence" };
+    else if (!vivas.length) recommendation = { kind: "viva", eyebrow: "Explain without options", title: "Take the cardiovascular oral viva", reason: "Your recognition evidence is ready to be tested as a spoken or typed mechanism explanation.", href: "/viva", action: "Start oral viva" };
     else recommendation = { kind: "assessment", eyebrow: "Integrate and verify", title: "Take the timed cardiovascular check", reason: "Diagnostic, lesson, case, and visual evidence are present. A timed assessment is the next integration step.", href: "/assessment", action: "Start assessment" };
 
     const graph = learningGraph.map((node) => ({
@@ -52,10 +61,13 @@ export async function GET(request: Request) {
         : node.id === "diagnostic" ? (diagnostics.length ? "evidence" : "ready")
         : node.id === "case" ? (cases.length ? "evidence" : "ready")
         : node.id === "visual" ? (visuals.length ? "evidence" : "ready")
+        : node.id === "interleave" ? (interleaved.length ? "evidence" : "ready")
+        : node.id === "viva" ? (vivas.length ? "evidence" : "ready")
+        : node.id === "confidence" ? (interleaved.length ? (highConfidenceWrong ? "active" : "evidence") : "ready")
+        : node.id === "blueprint" ? "ready"
         : node.id === "correction" ? (openMistakes.length || reviews.length ? "active" : "ready")
         : node.id === "mastery" ? "active" : "mapped",
     }));
-    return Response.json({ recommendation, graph, evidence: { diagnostics: diagnostics.length, cases: cases.length, visuals: visuals.length, openMistakes: openMistakes.length, dueReviews: dueReviews.length, sourceDocuments: documents.length, approvedMappings: alignments.filter((item) => item.decision === "approved").length }, latestDiagnostic: latestDiagnostic ? { score: Math.round(latestDiagnostic.correctCount / latestDiagnostic.totalCount * 100), domainScores: scores, completedAt: latestDiagnostic.completedAt } : null });
+    return Response.json({ recommendation, graph, evidence: { diagnostics: diagnostics.length, cases: cases.length, visuals: visuals.length, interleaved: interleaved.length, vivas: vivas.length, highConfidenceWrong, openMistakes: openMistakes.length, dueReviews: dueReviews.length, sourceDocuments: documents.length, approvedMappings: alignments.filter((item) => item.decision === "approved").length }, latestDiagnostic: latestDiagnostic ? { score: Math.round(latestDiagnostic.correctCount / latestDiagnostic.totalCount * 100), domainScores: scores, completedAt: latestDiagnostic.completedAt } : null });
   } catch { return Response.json({ error: "The learning engine could not calculate your next step." }, { status: 500 }); }
 }
-

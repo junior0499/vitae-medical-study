@@ -2,6 +2,8 @@ import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { learningActivityAttempts, mistakeNotebook } from "@/db/schema";
 
+export type LearningActivityType = "diagnostic" | "clinical_case" | "visual_lab" | "oral_viva" | "interleaved_review";
+
 export type ScoredLearningItem = {
   id: string;
   lessonSlug: string;
@@ -14,7 +16,7 @@ export type ScoredLearningItem = {
 
 export async function saveLearningAttempt(input: {
   ownerId: string;
-  activityType: "diagnostic" | "clinical_case" | "visual_lab";
+  activityType: LearningActivityType;
   activityId: string;
   subject: string;
   system: string;
@@ -74,3 +76,48 @@ export async function saveLearningAttempt(input: {
   return { attemptId, correctCount, totalCount: input.items.length, results, completedAt };
 }
 
+export async function saveVivaAttempt(input: {
+  ownerId: string;
+  activityId: string;
+  responses: Record<string, string>;
+  results: Array<{ questionId: string; lessonSlug: string; prompt: string; score: number; correct: boolean; modelAnswer: string; sourceLabel: string }>;
+}) {
+  const completedAt = new Date().toISOString();
+  const attemptId = crypto.randomUUID();
+  const correctCount = input.results.filter((result) => result.correct).length;
+  await getDb().insert(learningActivityAttempts).values({
+    id: attemptId,
+    ownerId: input.ownerId,
+    activityType: "oral_viva",
+    activityId: input.activityId,
+    subject: "Internal Medicine I",
+    system: "Cardiovascular",
+    correctCount,
+    totalCount: input.results.length,
+    detailsJson: JSON.stringify({ responses: input.responses, results: input.results }),
+    completedAt,
+  });
+  const assessmentId = `oral_viva:${input.activityId}`;
+  for (const result of input.results) {
+    if (result.correct) {
+      await getDb().update(mistakeNotebook).set({ status: "resolved", updatedAt: completedAt })
+        .where(and(eq(mistakeNotebook.ownerId, input.ownerId), eq(mistakeNotebook.assessmentId, assessmentId), eq(mistakeNotebook.questionKey, result.questionId)));
+      continue;
+    }
+    const values = {
+      subject: "Internal Medicine I",
+      lessonSlug: result.lessonSlug,
+      prompt: result.prompt,
+      originalAnswer: input.responses[result.questionId] || "No answer submitted",
+      correctedConcept: result.modelAnswer,
+      reason: "",
+      sourceLabel: result.sourceLabel,
+      status: "open",
+      nextReviewAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: completedAt,
+    };
+    await getDb().insert(mistakeNotebook).values({ id: crypto.randomUUID(), ownerId: input.ownerId, assessmentId, questionKey: result.questionId, ...values, createdAt: completedAt })
+      .onConflictDoUpdate({ target: [mistakeNotebook.ownerId, mistakeNotebook.assessmentId, mistakeNotebook.questionKey], set: values });
+  }
+  return { attemptId, correctCount, totalCount: input.results.length, results: input.results, completedAt };
+}

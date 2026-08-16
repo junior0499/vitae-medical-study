@@ -1,0 +1,10 @@
+"use client";
+
+import { useState } from "react";
+import { comparisonModes } from "@/lib/advanced-learning";
+
+export function ComparisonWorkspace() {
+  const [selectedId, setSelectedId] = useState(comparisonModes[0].id);
+  const selected = comparisonModes.find((item) => item.id === selectedId) ?? comparisonModes[0];
+  return <div className="comparison-page"><header className="comparison-hero"><div><span className="eyebrow"><i /> Recommendation 19 · Comparison mode</span><h1>Keep normal on the left.<br />Change one mechanism.</h1><p>Build disease reasoning from a stable normal model. Supported physiology is visible now; symptoms, examination, investigations, and treatment stay locked until matching sources are approved.</p></div><a className="primary-button primary-button--dark" href="/alignment">Review source gates <span>→</span></a></header><section className="comparison-selector" aria-label="Choose a comparison">{comparisonModes.map((item) => <button className={item.id === selected.id ? "is-active" : ""} type="button" aria-pressed={item.id === selected.id} onClick={() => setSelectedId(item.id)} key={item.id}><small>{item.foundation}</small><strong>{item.title}</strong></button>)}</section><section className="comparison-board" aria-labelledby="comparison-title"><header><div><span className="eyebrow">Source-grounded bridge</span><h2 id="comparison-title">{selected.title}</h2></div><small>{selected.sourceLabel}</small></header><div className="comparison-head"><span>Connection</span><strong>Normal physiology</strong><strong>Altered mechanism</strong></div>{selected.rows.map((row) => <article className={row.state === "locked" ? "is-locked" : ""} key={row.label}><span>{row.label}{row.state === "locked" ? <b>Source required</b> : null}</span><p>{row.normal}</p><p>{row.altered}</p></article>)}</section><aside className="comparison-rule"><span>⌁</span><div><strong>This is a disease bridge, not a disease lesson.</strong><p>Poh-tah-toh will replace the locked rows only after an approved section supports the diagnosis, findings, investigations, and management.</p></div><a href="/library">Upload a book section</a></aside></div>;
+}

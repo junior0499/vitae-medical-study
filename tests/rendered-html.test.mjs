@@ -213,6 +213,48 @@ test("declares durable learning, adaptive application, correction, map, review, 
   assert.match(lessonSourceRegistryText, /foundation-04/);
 });
 
+test("renders oral viva, comparison, interleaving, confidence, and exam-blueprint modes", async () => {
+  const [practiceResponse, vivaResponse, comparisonResponse, interleavedResponse, confidenceResponse, blueprintResponse] = await Promise.all([
+    render("/practice"),
+    render("/viva"),
+    render("/comparisons"),
+    render("/interleaved"),
+    render("/confidence"),
+    render("/exam-blueprint"),
+  ]);
+  for (const response of [practiceResponse, vivaResponse, comparisonResponse, interleavedResponse, confidenceResponse, blueprintResponse]) assert.equal(response.status, 200);
+  const [practiceHtml, vivaHtml, comparisonHtml, interleavedHtml, confidenceHtml, blueprintHtml] = await Promise.all([
+    practiceResponse.text(), vivaResponse.text(), comparisonResponse.text(), interleavedResponse.text(), confidenceResponse.text(), blueprintResponse.text(),
+  ]);
+  assert.match(practiceHtml, /Explain it\. Mix it/);
+  assert.match(practiceHtml, /Oral viva mode/);
+  assert.match(vivaHtml, /Say the mechanism/);
+  assert.match(vivaHtml, /Speak answer/);
+  assert.match(comparisonHtml, /Keep normal on the left/);
+  assert.match(comparisonHtml, /Source required/);
+  assert.match(interleavedHtml, /Switch the mechanism/);
+  assert.match(interleavedHtml, /how sure are you/);
+  assert.match(confidenceHtml, /Correctly certain is safer/);
+  assert.match(confidenceHtml, /Confident but incorrect/);
+  assert.match(blueprintHtml, /Every objective needs/);
+  assert.match(blueprintHtml, /not an official university weighting/);
+
+  const [vivaApi, interleavedApi, confidenceApi, blueprintApi, advancedLearning, engineApi] = await Promise.all([
+    readFile(new URL("../app/api/viva/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/interleaved/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/confidence/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/exam-blueprint/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/advanced-learning.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/learning-engine/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(vivaApi, /saveVivaAttempt/);
+  assert.match(interleavedApi, /interleaved_review/);
+  assert.match(confidenceApi, /highConfidenceWrong/);
+  assert.match(blueprintApi, /coverageObjectives/);
+  assert.match(advancedLearning, /Requires an approved clinical source/);
+  assert.match(engineApi, /Hidden certainty risk/);
+});
+
 test("removes the disposable starter and includes production brand metadata", async () => {
   const [page, layout, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

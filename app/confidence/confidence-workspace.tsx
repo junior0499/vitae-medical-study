@@ -1,0 +1,16 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type Risk = { questionId: string; prompt: string; domain: string; confidence: "low" | "medium" | "high"; correction: string; sourceLabel: string; completedAt: string };
+type ConfidenceData = { summary: { attempts: number; judgements: number; calibrated: number; highConfidenceWrong: number; lowConfidenceCorrect: number; averageConfidence: number }; risks: Risk[]; strengths: Risk[] };
+
+const emptyData: ConfidenceData = { summary: { attempts: 0, judgements: 0, calibrated: 0, highConfidenceWrong: 0, lowConfidenceCorrect: 0, averageConfidence: 0 }, risks: [], strengths: [] };
+
+export function ConfidenceWorkspace() {
+  const [data, setData] = useState<ConfidenceData>(emptyData);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { let active = true; fetch("/api/confidence").then((response) => response.ok ? response.json() : null).then((payload) => { if (active && payload) setData(payload); }).catch(() => undefined).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
+  const rate = data.summary.judgements ? Math.round(data.summary.calibrated / data.summary.judgements * 100) : 0;
+  return <div className="confidence-page"><header className="confidence-hero"><div><span className="eyebrow"><i /> Recommendation 21 · Confidence calibration</span><h1>Correct is useful.<br />Correctly certain is safer.</h1><p>The dashboard separates knowledge from certainty. The highest-priority risk is an answer that felt certain but was wrong.</p><a className="primary-button primary-button--dark" href="/interleaved">Add confidence evidence <span>→</span></a></div><div><strong>{loading ? "—" : `${rate}%`}</strong><span>calibrated judgements</span><p>{data.summary.attempts} interleaved sessions analysed</p></div></header><section className="confidence-metrics"><article><small>Confident + incorrect</small><strong>{data.summary.highConfidenceWrong}</strong><p>Correct these first; certainty can protect an error from review.</p></article><article><small>Uncertain + correct</small><strong>{data.summary.lowConfidenceCorrect}</strong><p>These concepts may need retrieval practice, not full relearning.</p></article><article><small>Average confidence</small><strong>{data.summary.averageConfidence || "—"}<i>/3</i></strong><p>Low, medium, and high become 1, 2, and 3 for the trend.</p></article><article><small>Total judgements</small><strong>{data.summary.judgements}</strong><p>Each combines one answer with a confidence decision.</p></article></section><section className="confidence-risk-list"><header className="section-header"><div><span className="eyebrow">Priority correction</span><h2>Confident but incorrect</h2></div><a href="/mistakes">Open mistake notebook →</a></header>{data.risks.length ? <div>{data.risks.map((item) => <article key={`${item.questionId}-${item.completedAt}`}><span>High confidence</span><div><small>{item.domain}</small><strong>{item.prompt}</strong><p>{item.correction}</p><b>{item.sourceLabel}</b></div></article>)}</div> : <aside><strong>No high-confidence errors recorded.</strong><p>{data.summary.judgements ? "Keep calibrating across future mixed sessions." : "Complete an interleaved review to create the first confidence profile."}</p><a href="/interleaved">Start mixed review</a></aside>}</section></div>;
+}

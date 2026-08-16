@@ -9,6 +9,8 @@ Poh-tah-toh is a private, source-grounded learning workspace for a medical stude
 - a domain-scored starting diagnostic and adaptive next-best lesson
 - one unified graph connecting syllabus, sources, lessons, application, correction, and mastery
 - progressive source-limited cases and a visual pressure-and-flow interpretation lab
+- spoken-or-typed oral viva, source-gated normal-versus-disease comparisons, and interleaved review
+- confidence-risk detection and a 68-objective MCQ/SAQ/OSCE/viva exam blueprint
 - adaptive Professor Mode with private notes and active recall
 - source-trailed MCQs, SAQs, Mini-OSCE scaffolds, and timed checks
 - automatic mistake notebook and sideways note-built mind maps
