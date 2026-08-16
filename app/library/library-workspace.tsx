@@ -14,6 +14,7 @@ type StudyDocument = {
   createdAt: string;
   sourceDetails: { bookTitle: string; bookEdition: string; sectionLabel: string; pageRange: string } | null;
 };
+type FileUploadState = "waiting" | "uploading" | "ready" | "error";
 
 const subjects = ["Internal Medicine", "Perioperative Medicine", "Women & Child Health", "Foundations", "Other"];
 
@@ -35,6 +36,9 @@ export function LibraryWorkspace() {
   const [pageRange, setPageRange] = useState("");
   const [state, setState] = useState<"idle" | "uploading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [fileStates, setFileStates] = useState<Record<string, FileUploadState>>({});
+
+  const fileKey = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
 
   async function loadDocuments() {
     try {
@@ -55,6 +59,7 @@ export function LibraryWorkspace() {
   function acceptFiles(incoming: FileList | null) {
     if (!incoming) return;
     setFiles(Array.from(incoming).slice(0, 5));
+    setFileStates(Object.fromEntries(Array.from(incoming).slice(0, 5).map((file) => [fileKey(file), "waiting"])));
     setState("idle");
     setMessage("");
   }
@@ -64,24 +69,35 @@ export function LibraryWorkspace() {
     if (!files.length) {
       setState("error"); setMessage("Choose at least one PDF or Word document."); return;
     }
-    setState("uploading"); setMessage("Uploading and organizing your sources…");
-    const form = new FormData();
-    form.set("semester", semester); form.set("subject", subject); form.set("category", category);
-    if (category === "Book section") {
-      form.set("bookTitle", bookTitle); form.set("bookEdition", bookEdition);
-      form.set("sectionLabel", sectionLabel); form.set("pageRange", pageRange);
-    }
-    files.forEach((file) => form.append("files", file));
-    try {
-      const response = await fetch("/api/documents", { method: "POST", body: form });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Upload failed");
-      setState("success"); setMessage(`${files.length} ${files.length === 1 ? "source" : "sources"} added to Semester ${semester}.`);
-      setFiles([]); if (inputRef.current) inputRef.current.value = "";
-      await loadDocuments();
-    } catch (error) {
-      setState("error"); setMessage(error instanceof Error ? error.message : "Upload failed. Please try again.");
-    }
+    setState("uploading"); setMessage("Uploading each section independently so one problem cannot block the others…");
+    const results = await Promise.all(files.map(async (file) => {
+      const key = fileKey(file);
+      setFileStates((current) => ({ ...current, [key]: "uploading" }));
+      const form = new FormData();
+      form.set("semester", semester); form.set("subject", subject); form.set("category", category);
+      if (category === "Book section") {
+        form.set("bookTitle", bookTitle); form.set("bookEdition", bookEdition);
+        form.set("sectionLabel", sectionLabel); form.set("pageRange", pageRange);
+      }
+      form.append("files", file);
+      try {
+        const response = await fetch("/api/documents", { method: "POST", body: form });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error ?? "Upload failed");
+        setFileStates((current) => ({ ...current, [key]: "ready" }));
+        return { file, ok: true, error: "" };
+      } catch (error) {
+        setFileStates((current) => ({ ...current, [key]: "error" }));
+        return { file, ok: false, error: error instanceof Error ? error.message : "Upload failed" };
+      }
+    }));
+    const successful = results.filter((result) => result.ok).length;
+    const failed = results.filter((result) => !result.ok);
+    setState(failed.length ? "error" : "success");
+    setMessage(failed.length ? `${successful} added; ${failed.length} kept here to retry. ${failed[0].error}` : `${successful} ${successful === 1 ? "source" : "sources"} added independently to Semester ${semester}.`);
+    setFiles(failed.map((result) => result.file));
+    if (!failed.length && inputRef.current) inputRef.current.value = "";
+    await loadDocuments();
   }
 
   const grouped = useMemo(() => {
@@ -115,7 +131,7 @@ export function LibraryWorkspace() {
             <input ref={inputRef} type="file" multiple accept=".pdf,.doc,.docx,.csv,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/csv,text/plain" onChange={(event) => acceptFiles(event.target.files)} />
             <span aria-hidden="true">⇧</span><strong>Drop your learning sources here</strong><p>syllabus, alignment, contents, or selected book sections</p><small>PDF, Word, CSV, or text · up to 5 files · 25 MB each</small>
           </label>
-          {files.length ? <div className="selected-files">{files.map((file) => <div key={`${file.name}-${file.size}`}><span>{file.type === "application/pdf" ? "PDF" : "DOC"}</span><p><strong>{file.name}</strong><small>{formatBytes(file.size)}</small></p><button type="button" onClick={() => setFiles((current) => current.filter((item) => item !== file))} aria-label={`Remove ${file.name}`}>×</button></div>)}</div> : null}
+          {files.length ? <div className="selected-files">{files.map((file) => { const uploadState = fileStates[fileKey(file)] ?? "waiting"; return <div key={fileKey(file)}><span>{file.type === "application/pdf" ? "PDF" : "DOC"}</span><p><strong>{file.name}</strong><small>{formatBytes(file.size)} · {uploadState === "uploading" ? "uploading…" : uploadState === "ready" ? "ready" : uploadState === "error" ? "retry needed" : "waiting"}</small></p><button type="button" disabled={uploadState === "uploading"} onClick={() => setFiles((current) => current.filter((item) => item !== file))} aria-label={`Remove ${file.name}`}>×</button></div>; })}</div> : null}
           {message ? <p className={`upload-message upload-message--${state}`} role="status">{message}</p> : null}
           <button className="upload-submit" type="submit" disabled={state === "uploading"}>{state === "uploading" ? "Adding sources…" : `Add ${files.length || ""} ${files.length === 1 ? "source" : "sources"}`}<span>→</span></button>
         </form>
@@ -123,7 +139,7 @@ export function LibraryWorkspace() {
         <aside className="source-flow-card">
           <span className="eyebrow">How Vitae uses sources</span><h2>Your material stays traceable.</h2>
           <ol><li><span>1</span><div><strong>Upload the syllabus</strong><p>Keep the official learning requirements.</p></div></li><li><span>2</span><div><strong>Add the alignment & contents</strong><p>Preserve the approved chapter plan.</p></div></li><li><span>3</span><div><strong>Add selected book sections</strong><p>Attach title, edition, chapter and pages.</p></div></li></ol>
-          <div><span aria-hidden="true">⌁</span><p><strong>Current capability</strong>All three clinical syllabi have reviewable topic-to-source maps. Approved mappings plus a matching Book section can now produce a source-locked lesson outline; page-level content extraction still requires source review.</p></div>
+          <div><span aria-hidden="true">⌁</span><p><strong>Independent fast path</strong>Each book section uploads and processes on its own. A difficult file cannot hold up the rest, and failed sections stay selected for a simple retry.</p></div>
           <a className="source-map-link" href="/alignment">Review the chapter map <span>→</span></a>
         </aside>
       </section>

@@ -1,0 +1,12 @@
+{
+  "name": "Vitae Medical Study Companion",
+  "short_name": "Vitae",
+  "description": "A source-grounded Semester 7 medical learning companion.",
+  "start_url": "/learn",
+  "display": "standalone",
+  "background_color": "#f3f5ef",
+  "theme_color": "#123a37",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

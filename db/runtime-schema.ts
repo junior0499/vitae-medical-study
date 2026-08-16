@@ -128,6 +128,56 @@ export function ensureVitaeSchema() {
       ON recall_reviews(owner_id, lesson_slug, question_key)`),
     database.prepare(`CREATE INDEX IF NOT EXISTS idx_recall_reviews_owner_due
       ON recall_reviews(owner_id, due_at)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS assessment_attempts (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      assessment_id TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      lesson_slug TEXT NOT NULL,
+      question_type TEXT DEFAULT 'mcq' NOT NULL,
+      correct_count INTEGER DEFAULT 0 NOT NULL,
+      total_count INTEGER DEFAULT 1 NOT NULL,
+      answers_json TEXT NOT NULL,
+      completed_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_assessment_attempts_owner_completed
+      ON assessment_attempts(owner_id, completed_at)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_assessment_attempts_owner_subject
+      ON assessment_attempts(owner_id, subject)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS mistake_notebook (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      assessment_id TEXT NOT NULL,
+      question_key TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      lesson_slug TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      original_answer TEXT DEFAULT '' NOT NULL,
+      corrected_concept TEXT NOT NULL,
+      reason TEXT DEFAULT '' NOT NULL,
+      source_label TEXT NOT NULL,
+      status TEXT DEFAULT 'open' NOT NULL,
+      next_review_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_mistake_notebook_owner_question
+      ON mistake_notebook(owner_id, assessment_id, question_key)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_mistake_notebook_owner_status_review
+      ON mistake_notebook(owner_id, status, next_review_at)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS note_mind_maps (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      lesson_slug TEXT NOT NULL,
+      title TEXT NOT NULL,
+      nodes_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_note_mind_maps_owner_lesson
+      ON note_mind_maps(owner_id, lesson_slug)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_note_mind_maps_owner_updated
+      ON note_mind_maps(owner_id, updated_at)`),
     database.prepare("PRAGMA optimize"),
   ]).then(() => undefined).catch((error) => {
     schemaPromise = null;

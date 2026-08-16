@@ -1,7 +1,9 @@
 /* eslint-disable @next/next/no-html-link-for-pages */
 
+import { MasteryMeter } from "@/components/mastery-meter";
+
 type VitaeFrameProps = {
-  active: "overview" | "learn" | "coverage" | "review" | "alignment" | "library";
+  active: "overview" | "learn" | "coverage" | "review" | "alignment" | "library" | "assessment" | "mistakes";
   title: string;
   subtitle: string;
   children: React.ReactNode;
@@ -13,6 +15,8 @@ const navItems: Array<{ id: string; href: string; icon: string; label: string; b
   { id: "coverage", href: "/coverage", icon: "◫", label: "Coverage" },
   { id: "alignment", href: "/alignment", icon: "⌁", label: "Source map" },
   { id: "review", href: "/review", icon: "↻", label: "Review" },
+  { id: "assessment", href: "/assessment", icon: "◇", label: "Assessment" },
+  { id: "mistakes", href: "/mistakes", icon: "✎", label: "Mistakes" },
   { id: "planner", href: "/#schedule", icon: "□", label: "Planner" },
   { id: "library", href: "/library", icon: "▤", label: "Library" },
 ];
@@ -33,11 +37,7 @@ export function VitaeFrame({ active, title, subtitle, children }: VitaeFrameProp
             </a>
           ))}
         </nav>
-        <div className="semester-card">
-          <span>Current semester</span><strong>Semester 7</strong>
-          <div><i style={{ width: "62%" }} /><b>62%</b></div>
-          <small>3 clinical subjects mapped</small>
-        </div>
+        <MasteryMeter />
         <div className="sidebar-footer">
           <span className="avatar">AK</span>
           <span><strong>Aanya Kapoor</strong><small>Medical student</small></span>

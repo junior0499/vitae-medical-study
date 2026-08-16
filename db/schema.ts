@@ -118,3 +118,53 @@ export const recallReviews = sqliteTable("recall_reviews", {
   uniqueIndex("idx_recall_reviews_owner_question").on(table.ownerId, table.lessonSlug, table.questionKey),
   index("idx_recall_reviews_owner_due").on(table.ownerId, table.dueAt),
 ]);
+
+export const assessmentAttempts = sqliteTable("assessment_attempts", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  assessmentId: text("assessment_id").notNull(),
+  subject: text("subject").notNull(),
+  lessonSlug: text("lesson_slug").notNull(),
+  questionType: text("question_type").notNull().default("mcq"),
+  correctCount: integer("correct_count").notNull().default(0),
+  totalCount: integer("total_count").notNull().default(1),
+  answersJson: text("answers_json").notNull(),
+  completedAt: text("completed_at").notNull(),
+}, (table) => [
+  index("idx_assessment_attempts_owner_completed").on(table.ownerId, table.completedAt),
+  index("idx_assessment_attempts_owner_subject").on(table.ownerId, table.subject),
+]);
+
+export const mistakeNotebook = sqliteTable("mistake_notebook", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  assessmentId: text("assessment_id").notNull(),
+  questionKey: text("question_key").notNull(),
+  subject: text("subject").notNull(),
+  lessonSlug: text("lesson_slug").notNull(),
+  prompt: text("prompt").notNull(),
+  originalAnswer: text("original_answer").notNull().default(""),
+  correctedConcept: text("corrected_concept").notNull(),
+  reason: text("reason").notNull().default(""),
+  sourceLabel: text("source_label").notNull(),
+  status: text("status").notNull().default("open"),
+  nextReviewAt: text("next_review_at").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_mistake_notebook_owner_question").on(table.ownerId, table.assessmentId, table.questionKey),
+  index("idx_mistake_notebook_owner_status_review").on(table.ownerId, table.status, table.nextReviewAt),
+]);
+
+export const noteMindMaps = sqliteTable("note_mind_maps", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  lessonSlug: text("lesson_slug").notNull(),
+  title: text("title").notNull(),
+  nodesJson: text("nodes_json").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_note_mind_maps_owner_lesson").on(table.ownerId, table.lessonSlug),
+  index("idx_note_mind_maps_owner_updated").on(table.ownerId, table.updatedAt),
+]);

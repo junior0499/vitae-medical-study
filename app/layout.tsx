@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Geist } from "next/font/google";
+import { OfflineManager } from "@/components/offline-manager";
 import "./globals.css";
 
 const geist = Geist({
@@ -33,6 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title,
     description,
     applicationName: "Vitae",
+    manifest: "/manifest.webmanifest",
     openGraph: {
       type: "website",
       title,
@@ -56,7 +58,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={geist.variable}>{children}</body>
+      <body className={geist.variable}>{children}<OfflineManager /></body>
     </html>
   );
 }

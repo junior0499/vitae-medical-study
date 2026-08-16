@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { enqueueOfflineAction, saveTravelPack } from "@/lib/offline-client";
 
 export type LessonStep = {
   stage: string;
@@ -44,13 +45,26 @@ type ProfessorLessonWorkspaceProps = {
   nextLesson?: { href: string; label: string };
 };
 
+type NoteMapNode = { label: string; detail: string };
+
+function buildNoteNodes(content: string): NoteMapNode[] {
+  const lines = content.split(/\n+|(?<=[.!?])\s+/).map((line) => line.replace(/^[-*\d.)\s]+/, "").trim()).filter((line) => line.length >= 8);
+  return lines.slice(0, 8).map((line, index) => {
+    const [heading, ...rest] = line.split(":");
+    const words = heading.split(/\s+/);
+    const label = (rest.length ? heading : words.slice(0, 5).join(" ")).slice(0, 60);
+    const detail = (rest.length ? rest.join(":").trim() : line).slice(0, 220);
+    return { label: label || `Point ${index + 1}`, detail };
+  });
+}
+
 export function ProfessorLessonWorkspace({
   lessonSlug, title, subtitle, notesLabel, notesPlaceholder, mapTitle, steps, recallQuestions, nextLesson,
 }: ProfessorLessonWorkspaceProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [completedPoints, setCompletedPoints] = useState(0);
   const [notes, setNotes] = useState("");
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "offline" | "error">("idle");
   const [revealed, setRevealed] = useState<number[]>([]);
   const [stepHelp, setStepHelp] = useState<Record<number, number>>({});
   const [recallHelp, setRecallHelp] = useState<Record<number, number>>({});
@@ -58,6 +72,9 @@ export function ProfessorLessonWorkspace({
   const [reviewSaving, setReviewSaving] = useState<number | null>(null);
   const [sources, setSources] = useState<SourceReference[]>([]);
   const [sourceMode, setSourceMode] = useState("Loading the approved reading route…");
+  const [noteMap, setNoteMap] = useState<NoteMapNode[]>([]);
+  const [mapState, setMapState] = useState("");
+  const [travelState, setTravelState] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -65,9 +82,12 @@ export function ProfessorLessonWorkspace({
       fetch(`/api/notes?lesson=${lessonSlug}`).then((response) => response.ok ? response.json() : null),
       fetch("/api/progress").then((response) => response.ok ? response.json() : null),
       fetch(`/api/lesson-sources?lesson=${lessonSlug}`).then((response) => response.ok ? response.json() : null),
-    ]).then(([notesData, progressData, sourceData]) => {
+      fetch(`/api/mind-maps?lesson=${lessonSlug}`).then((response) => response.ok ? response.json() : null),
+    ]).then(([notesData, progressData, sourceData, mapData]) => {
       if (!active) return;
+      const localDraft = window.localStorage.getItem(`vitae-note-draft:${lessonSlug}`) ?? "";
       if (notesData?.note?.content) setNotes(notesData.note.content);
+      else if (localDraft) { setNotes(localDraft); setSaveState("offline"); }
       const saved = progressData?.progress?.find((row: { lessonSlug: string }) => row.lessonSlug === lessonSlug);
       if (saved) {
         setCompletedPoints(saved.completedPoints);
@@ -76,6 +96,10 @@ export function ProfessorLessonWorkspace({
       if (sourceData?.sources) setSources(sourceData.sources);
       if (sourceData?.sourceMode) setSourceMode(sourceData.sourceMode);
       else setSourceMode("Reading references are unavailable right now; the professor explanation remains clearly labeled.");
+      const savedMap = mapData?.maps?.[0];
+      if (savedMap?.nodesJson) {
+        try { setNoteMap(JSON.parse(savedMap.nodesJson) as NoteMapNode[]); } catch { /* Ignore malformed historic maps. */ }
+      }
     }).catch(() => setSourceMode("Reading references are unavailable right now; the professor explanation remains clearly labeled."));
     return () => { active = false; };
   }, [lessonSlug, steps.length]);
@@ -89,11 +113,11 @@ export function ProfessorLessonWorkspace({
 
   async function persistProgress(points: number) {
     setCompletedPoints(points);
-    await fetch("/api/progress", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ lessonSlug, completedPoints: points, totalPoints: steps.length, status: points >= steps.length ? "complete" : "in_progress" }),
-    }).catch(() => undefined);
+    const body = { lessonSlug, completedPoints: points, totalPoints: steps.length, status: points >= steps.length ? "complete" : "in_progress" };
+    try {
+      const response = await fetch("/api/progress", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      if (!response.ok) throw new Error("Progress save failed.");
+    } catch { enqueueOfflineAction("/api/progress", "PUT", body); }
   }
 
   async function advance() {
@@ -104,12 +128,44 @@ export function ProfessorLessonWorkspace({
 
   async function saveNotes() {
     setSaveState("saving");
+    const body = { lessonSlug, content: notes };
     try {
       const response = await fetch("/api/notes", {
-        method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ lessonSlug, content: notes }),
+        method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
       });
-      setSaveState(response.ok ? "saved" : "error");
-    } catch { setSaveState("error"); }
+      if (!response.ok) throw new Error("Note save failed.");
+      window.localStorage.removeItem(`vitae-note-draft:${lessonSlug}`);
+      setSaveState("saved");
+      const nodes = buildNoteNodes(notes);
+      if (nodes.length >= 2) await persistMindMap(nodes, false);
+    } catch {
+      window.localStorage.setItem(`vitae-note-draft:${lessonSlug}`, notes);
+      enqueueOfflineAction("/api/notes", "PUT", body);
+      setSaveState("offline");
+    }
+  }
+
+  async function persistMindMap(nodes: NoteMapNode[], announce = true) {
+    if (nodes.length < 2) { setMapState("Write at least two clear note lines first."); return; }
+    const body = { lessonSlug, title: mapTitle, nodes };
+    setNoteMap(nodes);
+    if (announce) setMapState("Building your map…");
+    try {
+      const response = await fetch("/api/mind-maps", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      if (!response.ok) throw new Error("Map save failed.");
+      setMapState(announce ? "Sideways map saved from your notes." : "Map updated automatically from your saved notes.");
+    } catch {
+      enqueueOfflineAction("/api/mind-maps", "PUT", body);
+      setMapState("Map saved on this device and will sync when online.");
+    }
+  }
+
+  async function prepareTravelLesson() {
+    setTravelState("Preparing…");
+    try {
+      await saveTravelPack([`/learn/cardiovascular/${lessonSlug}`, "/learn", "/review", "/mistakes", "/maps", "/offline"]);
+      setTravelState("Saved for travel");
+    } catch { setTravelState("Could not save here"); }
   }
 
   async function rateRecall(index: number, item: RecallQuestion, rating: "again" | "hard" | "good") {
@@ -131,7 +187,8 @@ export function ProfessorLessonWorkspace({
       const labels = { again: "Back in about 10 minutes", hard: "Kept close for another review", good: "Scheduled at a longer interval" };
       setReviewState((current) => ({ ...current, [index]: labels[rating] }));
     } catch {
-      setReviewState((current) => ({ ...current, [index]: "Could not schedule yet. Please try again." }));
+      enqueueOfflineAction("/api/reviews", "POST", { lessonSlug, questionKey: `recall-${index + 1}`, question: item.q, answer: item.a, rating });
+      setReviewState((current) => ({ ...current, [index]: "Saved on this device; it will schedule when online." }));
     } finally {
       setReviewSaving(null);
     }
@@ -141,7 +198,7 @@ export function ProfessorLessonWorkspace({
     <div className="lesson-page">
       <header className="lesson-heading">
         <div><a href="/learn">← Clinical foundations</a><span className="eyebrow">Professor Mode · Foundation lesson</span><h1>{title}</h1><p>{subtitle}</p></div>
-        <div className="lesson-progress-card"><span><strong>{progressPercent}%</strong><small>lesson complete</small></span><div><i style={{ width: `${progressPercent}%` }} /></div><b>{complete ? "Foundation complete" : `${steps.length - completedPoints} points remaining`}</b></div>
+        <div className="lesson-heading-actions"><button type="button" className="travel-lesson-button" onClick={prepareTravelLesson}>↓ {travelState || "Save for travel"}</button><div className="lesson-progress-card"><span><strong>{progressPercent}%</strong><small>lesson complete</small></span><div><i style={{ width: `${progressPercent}%` }} /></div><b>{complete ? "Foundation complete" : `${steps.length - completedPoints} points remaining`}</b></div></div>
       </header>
 
       <section className="lesson-source-trail" aria-labelledby="lesson-source-title">
@@ -186,14 +243,17 @@ export function ProfessorLessonWorkspace({
         </article>
 
         <aside className="notes-card">
-          <header><div><span className="eyebrow">Your notebook</span><h2>Make it yours</h2></div><span className={`save-state save-state--${saveState}`}>{saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : saveState === "error" ? "Try again" : "Private"}</span></header>
+          <header><div><span className="eyebrow">Your notebook</span><h2>Make it yours</h2></div><span className={`save-state save-state--${saveState}`}>{saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : saveState === "offline" ? "Saved offline" : saveState === "error" ? "Try again" : "Private"}</span></header>
           <p>Write the idea in your own words. Your notes are saved privately to this lesson.</p>
           <label htmlFor="lesson-notes">{notesLabel}</label>
-          <textarea id="lesson-notes" value={notes} maxLength={30000} onChange={(event) => { setNotes(event.target.value); setSaveState("idle"); }} placeholder={notesPlaceholder} />
-          <button type="button" onClick={saveNotes} disabled={saveState === "saving"}>Save notes <span>✓</span></button>
+          <textarea id="lesson-notes" value={notes} maxLength={30000} onChange={(event) => { setNotes(event.target.value); setSaveState("idle"); window.localStorage.setItem(`vitae-note-draft:${lessonSlug}`, event.target.value); }} placeholder={notesPlaceholder} />
+          <div className="note-actions"><button type="button" onClick={saveNotes} disabled={saveState === "saving"}>Save notes <span>✓</span></button><button type="button" onClick={() => persistMindMap(buildNoteNodes(notes))}>Build sideways map <span>→</span></button></div>
+          {mapState ? <p className="note-map-state" role="status">{mapState} <a href="/maps">Open maps</a></p> : null}
           <small>{notes.length.toLocaleString()} / 30,000 characters</small>
         </aside>
       </section>
+
+      {noteMap.length >= 2 ? <section className="note-built-map" aria-labelledby="note-built-map-title"><header><div><span className="eyebrow">Automatic sideways mind map</span><h2 id="note-built-map-title">Built only from your notes</h2></div><a href="/maps">All saved maps →</a></header><div>{noteMap.map((node, index) => <article key={`${node.label}-${index}`}><span>{index + 1}</span><strong>{node.label}</strong><p>{node.detail}</p>{index < noteMap.length - 1 ? <i aria-hidden="true">→</i> : null}</article>)}</div></section> : null}
 
       <section id="recall" className="recall-section">
         <header className="section-header"><div><span className="eyebrow">Step 9 · Close the notes</span><h2>Active recall checkpoint</h2></div><span>{revealed.length} of {recallQuestions.length} revealed</span></header>

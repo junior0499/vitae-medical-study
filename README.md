@@ -1,16 +1,19 @@
 # Vitae
 
-Vitae is a calm, responsive study dashboard designed for medical students. It brings a focused daily plan, clinical-system foundations, a study timer, weekly momentum, and the Atlas learning companion into one clear workspace.
+Vitae is a private, source-grounded learning workspace for a medical student. It connects the university syllabus, selected book sections, foundation-first lessons, assessment, correction, recall, and evidence-based progress in one fast interface.
 
 ## Highlights
 
-- foundation-first clinical learning path
-- interactive daily study prescription
-- 25-minute focus timer
-- cardiovascular, respiratory, renal, and obstetric system progress
-- guided Atlas study companion with recall and planning prompts
+- 68-objective Semester 7 syllabus coverage and source alignment
+- subject-specific, foundation-first clinical learning routes
+- adaptive Professor Mode with private notes and active recall
+- source-trailed MCQs, SAQs, Mini-OSCE scaffolds, and timed checks
+- automatic mistake notebook and sideways note-built mind maps
+- mastery scores based on lessons, notes, assessment, and recall evidence
+- independent book-section uploads with partial failure and retry
+- offline travel packs with locally queued notes and recall ratings
 - accessible, responsive layout for desktop and mobile
-- private Sites deployment by default
+- private owner-only Sites deployment
 
 ## Local development
 
