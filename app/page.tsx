@@ -111,8 +111,8 @@ export default function Home() {
         </div>
 
         <div className="sidebar-footer">
-          <span className="avatar">AK</span>
-          <span><strong>Aanya Kapoor</strong><small>Medical student</small></span>
+          <span className="avatar">N</span>
+          <span><strong>Nemesis</strong><small>Medical student</small></span>
           <button type="button" aria-label="Open account menu">•••</button>
         </div>
       </aside>
@@ -143,7 +143,7 @@ export default function Home() {
           <section className="welcome-row" aria-labelledby="welcome-heading">
             <div>
               <span className="eyebrow"><i /> Your study desk</span>
-              <h1 id="welcome-heading">Good morning, Aanya.</h1>
+              <h1 id="welcome-heading">Good morning, Nemesis.</h1>
               <p>One clear concept at a time. Your next best study step is ready.</p>
             </div>
             <div className="exam-countdown" aria-label="Internal Medicine exam in 38 days">

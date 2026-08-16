@@ -34,7 +34,7 @@ test("server-renders the Poh-tah-toh medical study dashboard", async () => {
   assert.match(html, /<title>Poh-tah-toh — Medical Study Companion<\/title>/i);
   assert.match(html, /Poh-tah-toh/);
   assert.match(html, /cat-icon-192\.png/);
-  assert.match(html, /Good morning, Aanya\./);
+  assert.match(html, /Good morning, Nemesis\./);
   assert.match(html, /The cardiac cycle/);
   assert.match(html, /Today(?:&#x27;|&apos;|')s plan/);
   assert.match(html, /Atlas · Study companion/);

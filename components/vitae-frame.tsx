@@ -40,8 +40,8 @@ export function VitaeFrame({ active, title, subtitle, children }: VitaeFrameProp
         </nav>
         <MasteryMeter />
         <div className="sidebar-footer">
-          <span className="avatar">AK</span>
-          <span><strong>Aanya Kapoor</strong><small>Medical student</small></span>
+          <span className="avatar">N</span>
+          <span><strong>Nemesis</strong><small>Medical student</small></span>
           <a href="/" aria-label="Return to dashboard">←</a>
         </div>
       </aside>
@@ -51,7 +51,7 @@ export function VitaeFrame({ active, title, subtitle, children }: VitaeFrameProp
           <div className="topbar-copy"><span>{subtitle}</span><strong>{title}</strong></div>
           <div className="topbar-actions">
             <a className="frame-action" href="/library"><span aria-hidden="true">＋</span>Add a source</a>
-            <a className="frame-avatar" href="/" aria-label="Open study dashboard">AK</a>
+            <a className="frame-avatar" href="/" aria-label="Open study dashboard">N</a>
           </div>
         </header>
         {children}
