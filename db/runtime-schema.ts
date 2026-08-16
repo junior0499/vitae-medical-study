@@ -91,6 +91,43 @@ export function ensureVitaeSchema() {
     )`),
     database.prepare(`CREATE INDEX IF NOT EXISTS idx_imported_alignments_owner_created
       ON imported_alignments(owner_id, created_at)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS lesson_drafts (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      alignment_id TEXT NOT NULL,
+      source_document_id TEXT NOT NULL,
+      lesson_slug TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      system TEXT NOT NULL,
+      title TEXT NOT NULL,
+      status TEXT DEFAULT 'draft' NOT NULL,
+      outline_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_lesson_drafts_owner_alignment
+      ON lesson_drafts(owner_id, alignment_id)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_lesson_drafts_owner_updated
+      ON lesson_drafts(owner_id, updated_at)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS recall_reviews (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      lesson_slug TEXT NOT NULL,
+      question_key TEXT NOT NULL,
+      question TEXT NOT NULL,
+      answer TEXT NOT NULL,
+      last_rating TEXT DEFAULT 'good' NOT NULL,
+      repetitions INTEGER DEFAULT 0 NOT NULL,
+      interval_days INTEGER DEFAULT 1 NOT NULL,
+      ease_score INTEGER DEFAULT 250 NOT NULL,
+      due_at TEXT NOT NULL,
+      last_reviewed_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_recall_reviews_owner_question
+      ON recall_reviews(owner_id, lesson_slug, question_key)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_recall_reviews_owner_due
+      ON recall_reviews(owner_id, due_at)`),
     database.prepare("PRAGMA optimize"),
   ]).then(() => undefined).catch((error) => {
     schemaPromise = null;

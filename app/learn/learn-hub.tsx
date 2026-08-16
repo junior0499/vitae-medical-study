@@ -30,7 +30,7 @@ const clinicalSubjects: Array<{
     shortTitle: "Internal Medicine",
     color: "teal",
     description: "Build normal system foundations, then connect examination, investigations, and clinical disease.",
-    coverage: "3 clinical systems · source map available",
+    coverage: "30 source-mapped objectives",
     areas: [
       { code: "CV", title: "Cardiovascular", color: "teal", description: "Flow, pressure and electrical timing before clinical cardiology.", topics: ["Heart anatomy", "Blood flow", "Conduction", "Cardiac output"], state: "live" },
       { code: "RS", title: "Respiratory", color: "blue", description: "Ventilation, gas exchange and mechanics before respiratory disease.", topics: ["Airway anatomy", "Ventilation", "Perfusion", "Gas exchange"], state: "mapped" },
@@ -44,12 +44,12 @@ const clinicalSubjects: Array<{
     shortTitle: "Perioperative",
     color: "blue",
     description: "Connect surgical foundations, trauma, orthopaedics, immobilization, and recovery around the patient journey.",
-    coverage: "4 clinical blocks · syllabus structure ready",
+    coverage: "10 source-mapped objectives",
     areas: [
-      { code: "SG", title: "Surgery", color: "blue", description: "Core surgical principles from assessment and preparation to safe operative care.", topics: ["Surgical assessment", "Fluids", "Wound healing", "Infection"], state: "planned" },
-      { code: "TR", title: "Trauma", color: "coral", description: "A structured approach to the injured patient before organ-specific management.", topics: ["Primary survey", "Shock", "Initial stabilization", "Secondary survey"], state: "planned" },
-      { code: "OR", title: "Orthopaedics", color: "violet", description: "Musculoskeletal injury, fracture principles, examination, and safe immobilization.", topics: ["Bone & joint", "Fractures", "Limb examination", "Immobilization"], state: "planned" },
-      { code: "PO", title: "Postoperative care", color: "teal", description: "Recognize normal recovery and detect common postoperative problems early.", topics: ["Recovery", "Pain", "Monitoring", "Complications"], state: "planned" },
+      { code: "SG", title: "Surgery", color: "blue", description: "Core surgical principles from assessment and preparation to safe operative care.", topics: ["Surgical assessment", "Fluids", "Wound healing", "Infection"], state: "mapped" },
+      { code: "TR", title: "Trauma", color: "coral", description: "A structured approach to the injured patient before organ-specific management.", topics: ["Primary survey", "Shock", "Initial stabilization", "Secondary survey"], state: "mapped" },
+      { code: "OR", title: "Orthopaedics", color: "violet", description: "Musculoskeletal injury, fracture principles, examination, and safe immobilization.", topics: ["Bone & joint", "Fractures", "Limb examination", "Immobilization"], state: "mapped" },
+      { code: "PO", title: "Postoperative care", color: "teal", description: "Recognize normal recovery and detect common postoperative problems early.", topics: ["Recovery", "Pain", "Monitoring", "Complications"], state: "mapped" },
     ],
   },
   {
@@ -59,12 +59,12 @@ const clinicalSubjects: Array<{
     shortTitle: "Women & Child Health",
     color: "coral",
     description: "Follow reproductive, maternal, newborn, pediatric, and developmental care as one connected life-course subject.",
-    coverage: "4 clinical areas · syllabus structure ready",
+    coverage: "28 source-mapped objectives",
     areas: [
-      { code: "OG", title: "Obstetrics & Gynaecology", color: "coral", description: "Reproductive foundations, pregnancy, maternal physiology, and women’s health.", topics: ["Reproductive cycle", "Pregnancy", "Placenta", "Maternal care"], state: "planned" },
-      { code: "PD", title: "Pediatrics", color: "blue", description: "Age-aware assessment, growth, development, and care of the child.", topics: ["Child assessment", "Growth", "Development", "Nutrition"], state: "planned" },
-      { code: "NN", title: "Neonatology", color: "teal", description: "The transition to newborn life, initial assessment, and essential neonatal care.", topics: ["Birth transition", "Newborn exam", "Feeding", "Neonatal care"], state: "planned" },
-      { code: "HD", title: "Human development", color: "violet", description: "Connect milestones and developmental change from infancy through adolescence.", topics: ["Milestones", "Motor", "Language", "Social development"], state: "planned" },
+      { code: "OG", title: "Obstetrics & Gynaecology", color: "coral", description: "Reproductive foundations, pregnancy, maternal physiology, and women’s health.", topics: ["Reproductive cycle", "Pregnancy", "Placenta", "Maternal care"], state: "mapped" },
+      { code: "PD", title: "Pediatrics", color: "blue", description: "Age-aware assessment, growth, development, and care of the child.", topics: ["Child assessment", "Growth", "Development", "Nutrition"], state: "mapped" },
+      { code: "NN", title: "Neonatology", color: "teal", description: "The transition to newborn life, initial assessment, and essential neonatal care.", topics: ["Birth transition", "Newborn exam", "Feeding", "Neonatal care"], state: "mapped" },
+      { code: "HD", title: "Human development", color: "violet", description: "Connect milestones and developmental change from infancy through adolescence.", topics: ["Milestones", "Motor", "Language", "Social development"], state: "mapped" },
     ],
   },
 ];
@@ -168,9 +168,9 @@ export function LearnHub() {
             </div>
           ))}
         </div>
-      </section> : <section className="subject-next-step"><span aria-hidden="true">⌁</span><div><strong>{selectedSubject.shortTitle} is now visible as its own learning subject.</strong><p>Its clinical areas are grouped from the syllabus. Detailed source alignment and Professor Mode lessons will be added area by area.</p></div><a href="/library">Review sources</a></section>}
+      </section> : <section className="subject-next-step"><span aria-hidden="true">⌁</span><div><strong>{selectedSubject.shortTitle} now has a reviewable source map.</strong><p>Exact chapters and pages stay marked for confirmation until you upload the matching contents or book sections.</p></div><a href="/coverage">View coverage</a></section>}
 
-      <section className="coming-next source-map-promo"><span aria-hidden="true">⌁</span><div><strong>The current source map covers 30 Internal Medicine topic groups.</strong><p>Perioperative Medicine and Women & Child Health now have their own learning homes and can receive separate source maps next.</p></div><a href="/alignment">Open source map</a></section>
+      <section className="coming-next source-map-promo"><span aria-hidden="true">⌁</span><div><strong>All 68 Semester 7 objectives are visible in one coverage map.</strong><p>Track mapping, approval, uploaded source sections, lesson drafts, and recall review without hiding chapter uncertainty.</p></div><a href="/coverage">Open coverage</a></section>
 
       <section id="coming-next" className="coming-next"><span aria-hidden="true">✦</span><div><strong>Subject first. System second. Lesson third.</strong><p>{outputComplete ? "Cardiac output is complete. Blood pressure is the next planned Internal Medicine foundation." : `${currentTitle} remains your active lesson inside Internal Medicine.`}</p></div><a href={currentHref}>{outputComplete ? "Review lesson" : "Continue lesson"}</a></section>
     </div>

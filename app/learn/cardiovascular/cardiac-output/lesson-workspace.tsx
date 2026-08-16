@@ -13,9 +13,9 @@ const lessonSteps: LessonStep[] = [
 ];
 
 const recallQuestions: RecallQuestion[] = [
-  { q: "If HR is 70/min and SV is 70 mL, what is cardiac output?", a: "4,900 mL/min, or 4.9 L/min." },
-  { q: "What usually happens to ESV and SV when afterload rises acutely?", a: "ESV tends to rise and stroke volume tends to fall because ejection is harder." },
-  { q: "How do preload and contractility differ?", a: "Preload describes the starting myocardial stretch from filling; contractility describes the strength of the squeeze at a given load." },
+  { q: "If HR is 70/min and SV is 70 mL, what is cardiac output?", a: "4,900 mL/min, or 4.9 L/min.", hint: "Multiply beats per minute by millilitres per beat, then divide by 1,000.", options: ["0.49 L/min", "4.9 L/min", "49 L/min"], followUp: "What would happen if stroke volume fell to 50 mL at the same heart rate?" },
+  { q: "What usually happens to ESV and SV when afterload rises acutely?", a: "ESV tends to rise and stroke volume tends to fall because ejection is harder.", hint: "A higher opposing load makes it harder for the ventricle to empty.", options: ["ESV rises and SV falls", "ESV falls and SV rises", "Both remain unchanged"], followUp: "Use SV = EDV − ESV to explain the result." },
+  { q: "How do preload and contractility differ?", a: "Preload describes the starting myocardial stretch from filling; contractility describes the strength of the squeeze at a given load.", hint: "Separate the condition before contraction from the force produced during contraction.", options: ["Starting fill versus squeeze strength", "Heart rate versus arterial pressure", "Residual volume versus ejection fraction"], followUp: "Which one is most directly influenced by venous return?" },
 ];
 
 export function LessonWorkspace() {

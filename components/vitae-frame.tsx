@@ -1,17 +1,18 @@
 /* eslint-disable @next/next/no-html-link-for-pages */
 
 type VitaeFrameProps = {
-  active: "overview" | "learn" | "alignment" | "library";
+  active: "overview" | "learn" | "coverage" | "review" | "alignment" | "library";
   title: string;
   subtitle: string;
   children: React.ReactNode;
 };
 
-const navItems = [
+const navItems: Array<{ id: string; href: string; icon: string; label: string; badge?: string }> = [
   { id: "overview", href: "/", icon: "⌂", label: "Overview" },
   { id: "learn", href: "/learn", icon: "◎", label: "Learn" },
+  { id: "coverage", href: "/coverage", icon: "◫", label: "Coverage" },
   { id: "alignment", href: "/alignment", icon: "⌁", label: "Source map" },
-  { id: "recall", href: "/learn/cardiovascular/cardiac-cycle#recall", icon: "↻", label: "Recall", badge: "5" },
+  { id: "review", href: "/review", icon: "↻", label: "Review" },
   { id: "planner", href: "/#schedule", icon: "□", label: "Planner" },
   { id: "library", href: "/library", icon: "▤", label: "Library" },
 ];
@@ -35,7 +36,7 @@ export function VitaeFrame({ active, title, subtitle, children }: VitaeFrameProp
         <div className="semester-card">
           <span>Current semester</span><strong>Semester 7</strong>
           <div><i style={{ width: "62%" }} /><b>62%</b></div>
-          <small>3 clinical blocks mapped</small>
+          <small>3 clinical subjects mapped</small>
         </div>
         <div className="sidebar-footer">
           <span className="avatar">AK</span>

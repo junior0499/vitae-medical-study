@@ -40,21 +40,23 @@ test("server-renders the Vitae medical study dashboard", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
 
-test("renders the curriculum, source alignment, Professor Mode lesson, and source library", async () => {
-  const [learnResponse, alignmentResponse, lessonResponse, outputResponse, libraryResponse] = await Promise.all([
+test("renders the curriculum, coverage, source alignment, adaptive lesson, review queue, and library", async () => {
+  const [learnResponse, coverageResponse, alignmentResponse, lessonResponse, outputResponse, reviewResponse, libraryResponse] = await Promise.all([
     render("/learn"),
+    render("/coverage"),
     render("/alignment"),
     render("/learn/cardiovascular/cardiac-cycle"),
     render("/learn/cardiovascular/cardiac-output"),
+    render("/review"),
     render("/library"),
   ]);
 
-  for (const response of [learnResponse, alignmentResponse, lessonResponse, outputResponse, libraryResponse]) {
+  for (const response of [learnResponse, coverageResponse, alignmentResponse, lessonResponse, outputResponse, reviewResponse, libraryResponse]) {
     assert.equal(response.status, 200);
   }
 
-  const [learnHtml, alignmentHtml, lessonHtml, outputHtml, libraryHtml] = await Promise.all([
-    learnResponse.text(), alignmentResponse.text(), lessonResponse.text(), outputResponse.text(), libraryResponse.text(),
+  const [learnHtml, coverageHtml, alignmentHtml, lessonHtml, outputHtml, reviewHtml, libraryHtml] = await Promise.all([
+    learnResponse.text(), coverageResponse.text(), alignmentResponse.text(), lessonResponse.text(), outputResponse.text(), reviewResponse.text(), libraryResponse.text(),
   ]);
   assert.match(learnHtml, /Choose the subject/);
   assert.match(learnHtml, /Internal Medicine I/);
@@ -62,7 +64,13 @@ test("renders the curriculum, source alignment, Professor Mode lesson, and sourc
   assert.match(learnHtml, /Women &amp; Child Health I/);
   assert.match(learnHtml, /Subject.*Clinical system.*Lesson/s);
   assert.match(learnHtml, /Cardiovascular route/);
-  assert.match(learnHtml, /30 Internal Medicine topic groups/);
+  assert.match(learnHtml, /68 Semester 7 objectives/);
+  assert.match(learnHtml, /28 source-mapped objectives/);
+  assert.match(coverageHtml, /Syllabus mastery dashboard/);
+  assert.match(coverageHtml, /See what is mapped/);
+  assert.match(coverageHtml, /Internal Medicine I/);
+  assert.match(coverageHtml, /Perioperative Medicine I/);
+  assert.match(coverageHtml, /Women &amp; Child Health I/);
   assert.match(alignmentHtml, /Every topic now has/);
   assert.match(alignmentHtml, /Course identity needs confirmation/);
   assert.match(alignmentHtml, /Foundation-first source bridge/);
@@ -72,8 +80,14 @@ test("renders the curriculum, source alignment, Professor Mode lesson, and sourc
   assert.match(alignmentHtml, /Steps 7–10/);
   assert.match(alignmentHtml, /From approved map to Professor Mode/);
   assert.match(alignmentHtml, /Acute bronchitis/);
+  assert.match(alignmentHtml, /Schwartz/);
+  assert.match(alignmentHtml, /Williams Obstetrics/);
+  assert.match(alignmentHtml, /Neonatal jaundice/);
   assert.match(alignmentHtml, /No direct source/);
   assert.match(lessonHtml, /Professor Mode/);
+  assert.match(lessonHtml, /Adaptive Professor Mode/);
+  assert.match(lessonHtml, /Need a hint/);
+  assert.match(lessonHtml, /Show options/);
   assert.match(lessonHtml, /Sideways concept map/);
   assert.match(lessonHtml, /Source trail/);
   assert.match(lessonHtml, /Active recall checkpoint/);
@@ -81,6 +95,8 @@ test("renders the curriculum, source alignment, Professor Mode lesson, and sourc
   assert.match(outputHtml, /CO = HR × SV/);
   assert.match(outputHtml, /From one beat to flow per minute/);
   assert.match(outputHtml, /Professor explanation/);
+  assert.match(reviewHtml, /Smart recall queue/);
+  assert.match(reviewHtml, /Review what your memory/);
   assert.match(libraryHtml, /Upload sources/);
   assert.match(libraryHtml, /Book section/);
   assert.match(libraryHtml, /Alignment plan/);
@@ -88,32 +104,47 @@ test("renders the curriculum, source alignment, Professor Mode lesson, and sourc
   assert.match(libraryHtml, /Saved by semester/);
 });
 
-test("declares durable progress, notes, source trails, and document storage", async () => {
-  const [hostingText, schemaText, migrationText, alignmentMigrationText, documentRouteText, alignmentRouteText, lessonSourceRouteText, lessonSourceRegistryText] = await Promise.all([
+test("declares durable progress, notes, source trails, lesson drafts, review scheduling, and document storage", async () => {
+  const [hostingText, schemaText, migrationText, alignmentMigrationText, learningMigrationText, runtimeSchemaText, documentRouteText, alignmentRouteText, lessonSourceRouteText, lessonDraftRouteText, reviewRouteText, coverageRouteText, lessonSourceRegistryText] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0000_dark_exodus.sql", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0001_ancient_ulik.sql", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0002_free_scalphunter.sql", import.meta.url), "utf8"),
+    readFile(new URL("../db/runtime-schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/documents/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/alignments/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/lesson-sources/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/lesson-drafts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/reviews/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/coverage/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/lesson-sources.ts", import.meta.url), "utf8"),
   ]);
   const hosting = JSON.parse(hostingText);
   assert.equal(hosting.d1, "DB");
   assert.equal(hosting.r2, "DOCUMENTS");
-  assert.match(schemaText, /lessonProgress|lessonNotes|studyDocuments|alignmentReviews|importedAlignments|documentSourceDetails/);
+  assert.match(schemaText, /lessonProgress|lessonNotes|studyDocuments|alignmentReviews|importedAlignments|documentSourceDetails|lessonDrafts|recallReviews/);
   assert.match(migrationText, /CREATE TABLE `lesson_progress`/);
   assert.match(migrationText, /CREATE TABLE `study_documents`/);
   assert.match(alignmentMigrationText, /CREATE TABLE `alignment_reviews`/);
   assert.match(alignmentMigrationText, /CREATE TABLE `imported_alignments`/);
   assert.match(alignmentMigrationText, /CREATE TABLE `document_source_details`/);
+  assert.match(learningMigrationText, /CREATE TABLE `lesson_drafts`/);
+  assert.match(learningMigrationText, /CREATE TABLE `recall_reviews`/);
+  assert.match(runtimeSchemaText, /CREATE TABLE IF NOT EXISTS lesson_drafts/);
+  assert.match(runtimeSchemaText, /CREATE TABLE IF NOT EXISTS recall_reviews/);
   assert.match(documentRouteText, /MAX_FILES = 5/);
   assert.match(documentRouteText, /getStudyBucket/);
   assert.match(documentRouteText, /Book section/);
   assert.match(alignmentRouteText, /parseAlignmentTable/);
   assert.match(alignmentRouteText, /changes_requested/);
   assert.match(lessonSourceRouteText, /alignmentReviews/);
+  assert.match(lessonDraftRouteText, /approval_required/);
+  assert.match(lessonDraftRouteText, /source_required/);
+  assert.match(lessonDraftRouteText, /Draft outline only/);
+  assert.match(reviewRouteText, /again/);
+  assert.match(reviewRouteText, /10 \* 60 \* 1000/);
+  assert.match(coverageRouteText, /coverageObjectives/);
   assert.match(lessonSourceRegistryText, /foundation-03/);
   assert.match(lessonSourceRegistryText, /foundation-04/);
 });

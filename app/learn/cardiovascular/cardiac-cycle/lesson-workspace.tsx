@@ -13,9 +13,9 @@ const lessonSteps: LessonStep[] = [
 ];
 
 const recallQuestions: RecallQuestion[] = [
-  { q: "What closes the AV valves?", a: "Ventricular pressure rising above atrial pressure." },
-  { q: "Why is contraction called isovolumetric at first?", a: "All valves are closed, so pressure rises while ventricular volume stays constant." },
-  { q: "What event produces S2?", a: "Closure of the aortic and pulmonary valves as ventricular pressure falls below arterial pressure." },
+  { q: "What closes the AV valves?", a: "Ventricular pressure rising above atrial pressure.", hint: "Compare the pressure on the ventricular side with the pressure on the atrial side.", options: ["Atrial pressure rises above ventricular pressure", "Ventricular pressure rises above atrial pressure", "Aortic pressure falls below ventricular pressure"], followUp: "Which heart sound follows this valve closure?" },
+  { q: "Why is contraction called isovolumetric at first?", a: "All valves are closed, so pressure rises while ventricular volume stays constant.", hint: "Ask whether blood can enter or leave while every valve is closed.", options: ["Volume rises without a pressure change", "Pressure rises without a volume change", "Both pressure and volume fall"], followUp: "What pressure event ends this phase?" },
+  { q: "What event produces S2?", a: "Closure of the aortic and pulmonary valves as ventricular pressure falls below arterial pressure.", hint: "Think of the two outflow valves at the end of ejection.", options: ["AV-valve opening", "AV-valve closure", "Semilunar-valve closure"], followUp: "Which isovolumetric phase begins immediately afterward?" },
 ];
 
 export function LessonWorkspace() {

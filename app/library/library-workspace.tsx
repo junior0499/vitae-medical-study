@@ -123,7 +123,7 @@ export function LibraryWorkspace() {
         <aside className="source-flow-card">
           <span className="eyebrow">How Vitae uses sources</span><h2>Your material stays traceable.</h2>
           <ol><li><span>1</span><div><strong>Upload the syllabus</strong><p>Keep the official learning requirements.</p></div></li><li><span>2</span><div><strong>Add the alignment & contents</strong><p>Preserve the approved chapter plan.</p></div></li><li><span>3</span><div><strong>Add selected book sections</strong><p>Attach title, edition, chapter and pages.</p></div></li></ol>
-          <div><span aria-hidden="true">⌁</span><p><strong>Current capability</strong>The Internal Medicine syllabus now has a manually verified chapter map. Automatic extraction and page-level lesson citations remain a later source-processing stage.</p></div>
+          <div><span aria-hidden="true">⌁</span><p><strong>Current capability</strong>All three clinical syllabi have reviewable topic-to-source maps. Approved mappings plus a matching Book section can now produce a source-locked lesson outline; page-level content extraction still requires source review.</p></div>
           <a className="source-map-link" href="/alignment">Review the chapter map <span>→</span></a>
         </aside>
       </section>

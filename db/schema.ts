@@ -81,3 +81,40 @@ export const importedAlignments = sqliteTable("imported_alignments", {
 }, (table) => [
   index("idx_imported_alignments_owner_created").on(table.ownerId, table.createdAt),
 ]);
+
+export const lessonDrafts = sqliteTable("lesson_drafts", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  alignmentId: text("alignment_id").notNull(),
+  sourceDocumentId: text("source_document_id").notNull(),
+  lessonSlug: text("lesson_slug").notNull(),
+  subject: text("subject").notNull(),
+  system: text("system").notNull(),
+  title: text("title").notNull(),
+  status: text("status").notNull().default("draft"),
+  outlineJson: text("outline_json").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_lesson_drafts_owner_alignment").on(table.ownerId, table.alignmentId),
+  index("idx_lesson_drafts_owner_updated").on(table.ownerId, table.updatedAt),
+]);
+
+export const recallReviews = sqliteTable("recall_reviews", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  lessonSlug: text("lesson_slug").notNull(),
+  questionKey: text("question_key").notNull(),
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+  lastRating: text("last_rating").notNull().default("good"),
+  repetitions: integer("repetitions").notNull().default(0),
+  intervalDays: integer("interval_days").notNull().default(1),
+  easeScore: integer("ease_score").notNull().default(250),
+  dueAt: text("due_at").notNull(),
+  lastReviewedAt: text("last_reviewed_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_recall_reviews_owner_question").on(table.ownerId, table.lessonSlug, table.questionKey),
+  index("idx_recall_reviews_owner_due").on(table.ownerId, table.dueAt),
+]);

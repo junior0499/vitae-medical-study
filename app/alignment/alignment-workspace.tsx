@@ -1,13 +1,13 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { subjectAlignments, type CurriculumSubject } from "@/lib/subject-alignments";
 
-type SystemKey = "Cardiovascular" | "Respiratory" | "Renal";
 type StatusKey = "strong" | "partial" | "review" | "missing";
 
 type AlignmentRow = {
   id: string;
-  system: SystemKey;
+  system: string;
   week: string;
   number: string;
   topic: string;
@@ -64,6 +64,46 @@ const sources = [
     role: "Advanced cardiology detail",
     status: "Newer edition",
     tone: "depth",
+  },
+  {
+    short: "SCHW",
+    title: "Schwartz’s Principles of Surgery",
+    detail: "9th/11th edition · syllabus-mandated",
+    role: "Perioperative surgery source",
+    status: "Section needed",
+    tone: "exam",
+  },
+  {
+    short: "ORTHO",
+    title: "Evidence-Based Orthopedics",
+    detail: "1st edition · Bhandari · 2012",
+    role: "Trauma and orthopaedics source",
+    status: "Section needed",
+    tone: "cardio",
+  },
+  {
+    short: "WILL",
+    title: "Williams Obstetrics",
+    detail: "25th edition · Cunningham et al. · 2018",
+    role: "Primary obstetrics source",
+    status: "Section needed",
+    tone: "depth",
+  },
+  {
+    short: "NEL",
+    title: "Nelson Textbook of Pediatrics",
+    detail: "21st edition · Kliegman et al. · 2019",
+    role: "Primary pediatrics source",
+    status: "Section needed",
+    tone: "primary",
+  },
+  {
+    short: "BERK",
+    title: "Child Development",
+    detail: "9th edition · Berk · 2013",
+    role: "Human development source",
+    status: "Section needed",
+    tone: "exam",
   },
 ];
 
@@ -290,9 +330,14 @@ const alignments: AlignmentRow[] = [
   },
 ];
 
+const allAlignments = [
+  ...alignments.map((item) => ({ ...item, subject: "Internal Medicine I" as CurriculumSubject })),
+  ...subjectAlignments,
+];
+
 export function AlignmentWorkspace() {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [system, setSystem] = useState<"All" | SystemKey>("All");
+  const [subject, setSubject] = useState<"All" | CurriculumSubject>("All");
   const [status, setStatus] = useState<"all" | StatusKey>("all");
   const [query, setQuery] = useState("");
   const [reviews, setReviews] = useState<Record<string, AlignmentReview>>({});
@@ -315,15 +360,15 @@ export function AlignmentWorkspace() {
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return alignments.filter((item) => {
-      const matchesSystem = system === "All" || item.system === system;
+    return allAlignments.filter((item) => {
+      const matchesSubject = subject === "All" || item.subject === subject;
       const matchesStatus = status === "all" || item.status === status;
-      const matchesQuery = !normalized || `${item.topic} ${item.primary} ${item.support}`.toLowerCase().includes(normalized);
-      return matchesSystem && matchesStatus && matchesQuery;
+      const matchesQuery = !normalized || `${item.subject} ${item.system} ${item.topic} ${item.primary} ${item.support}`.toLowerCase().includes(normalized);
+      return matchesSubject && matchesStatus && matchesQuery;
     });
-  }, [query, status, system]);
+  }, [query, status, subject]);
 
-  const statusCounts = useMemo(() => alignments.reduce<Record<StatusKey, number>>((counts, item) => {
+  const statusCounts = useMemo(() => allAlignments.reduce<Record<StatusKey, number>>((counts, item) => {
     counts[item.status] += 1;
     return counts;
   }, { strong: 0, partial: 0, review: 0, missing: 0 }), []);
@@ -385,7 +430,7 @@ export function AlignmentWorkspace() {
         <div>
           <span className="eyebrow"><i /> Syllabus → books → lessons</span>
           <h1>Every topic now has<br />a source path.</h1>
-          <p>The Internal Medicine syllabus has been checked against the books currently available. Start with the recommended chapter, see the exact PDF location, and notice where human confirmation is still needed.</p>
+          <p>All three Semester 7 clinical syllabi now have a reviewable source route. Internal Medicine includes verified chapter locations; Perioperative and Women & Child Health preserve their mandated books while awaiting uploaded sections for exact chapters and pages.</p>
           <div className="alignment-hero-actions">
             <a className="primary-button primary-button--dark" href="#alignment-table">Explore chapter map <span>↓</span></a>
             <a href="/library">Open source library</a>
@@ -393,7 +438,7 @@ export function AlignmentWorkspace() {
         </div>
         <div className="alignment-scorecard" aria-label="Alignment summary">
           <span>Alignment prepared</span>
-          <strong>{alignments.length + imported.length}<small>mapped + imported groups</small></strong>
+          <strong>{allAlignments.length + imported.length}<small>mapped + imported groups</small></strong>
           <div>
             <span><i className="status-dot status-dot--strong" /><b>{statusCounts.strong}</b><small>strong</small></span>
             <span><i className="status-dot status-dot--partial" /><b>{statusCounts.partial}</b><small>partial</small></span>
@@ -406,7 +451,7 @@ export function AlignmentWorkspace() {
       <section className="alignment-steps alignment-steps--six" aria-label="ChatGPT to Vitae source workflow">
         <article className="is-complete"><span>1</span><div><strong>Syllabus reviewed</strong><small>Objectives, weeks and literature</small></div><b>✓</b></article>
         <article className="is-complete"><span>2</span><div><strong>Books identified</strong><small>Titles, authors and editions</small></div><b>✓</b></article>
-        <article className="is-complete"><span>3</span><div><strong>Chapters aligned</strong><small>Verified PDF start pages</small></div><b>✓</b></article>
+        <article className="is-complete"><span>3</span><div><strong>Topic routes drafted</strong><small>Exact pages stay visibly unverified</small></div><b>✓</b></article>
         <article className={approvedCount ? "is-complete" : "is-next"}><span>4</span><div><strong>Review & approve</strong><small>{approvedCount} decisions approved</small></div><b>{approvedCount ? "✓" : "Now"}</b></article>
         <article><span>5</span><div><strong>Upload source bundle</strong><small>Syllabus, contents and book sections</small></div><a href="/library">Open</a></article>
         <article className={imported.length ? "is-complete" : "is-next"}><span>6</span><div><strong>Import alignment</strong><small>Paste a table or choose a file</small></div><a href="#alignment-import">{imported.length ? "✓" : "Open"}</a></article>
@@ -452,7 +497,7 @@ export function AlignmentWorkspace() {
             </article>
           ))}
         </div>
-        <p className="edition-note"><span aria-hidden="true">⌁</span><strong>Edition rule:</strong> the syllabus weekly table requests HCM 3e, HPIM 20e and Bates 11e. Your available editions differ, so the map uses the best available chapter match and keeps an edition-check label visible.</p>
+        <p className="edition-note"><span aria-hidden="true">⌁</span><strong>Source rule:</strong> Internal Medicine keeps its visible edition mismatches. The other two subjects keep exact syllabus-mandated titles, but no chapter or page is treated as verified until you upload a contents page or book section.</p>
       </section>
 
       <section className="foundation-map" aria-labelledby="foundation-map-title">
@@ -480,10 +525,10 @@ export function AlignmentWorkspace() {
       </section>
 
       <section id="alignment-table" className="alignment-table" aria-labelledby="alignment-table-title">
-        <header className="section-header"><div><span className="eyebrow">Syllabus coverage</span><h2 id="alignment-table-title">Topic-to-chapter map</h2></div><span>{filtered.length} of {alignments.length} shown</span></header>
+        <header className="section-header"><div><span className="eyebrow">Three-subject syllabus coverage</span><h2 id="alignment-table-title">Topic-to-source map</h2></div><span>{filtered.length} of {allAlignments.length} shown</span></header>
         <div className="alignment-toolbar">
-          <div className="system-tabs" role="group" aria-label="Filter by clinical system">
-            {(["All", "Cardiovascular", "Respiratory", "Renal"] as const).map((item) => <button className={system === item ? "is-active" : ""} type="button" onClick={() => setSystem(item)} key={item}>{item}</button>)}
+          <div className="system-tabs" role="group" aria-label="Filter by clinical subject">
+            {(["All", "Internal Medicine I", "Perioperative Medicine I", "Women & Child Health I"] as const).map((item) => <button className={subject === item ? "is-active" : ""} type="button" onClick={() => setSubject(item)} key={item}>{item}</button>)}
           </div>
           <label className="alignment-search"><span aria-hidden="true">⌕</span><span className="sr-only">Search topics or chapters</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search topics or chapters" /></label>
           <label className="status-filter"><span className="sr-only">Filter by alignment status</span><select value={status} onChange={(event) => setStatus(event.target.value as "all" | StatusKey)}><option value="all">All statuses</option><option value="strong">Strong match</option><option value="partial">Partial match</option><option value="review">Needs review</option><option value="missing">No direct source</option></select></label>
@@ -492,7 +537,7 @@ export function AlignmentWorkspace() {
         <div className="alignment-list" aria-live="polite">
           {filtered.map((item) => (
             <article className="alignment-row" key={item.id}>
-              <div className="alignment-week"><span>{item.system}</span><strong>Week {item.week}</strong><small>Topic {item.number}</small></div>
+              <div className="alignment-week"><span>{item.subject}</span><strong>{item.system}</strong><small>Week {item.week} · Topic {item.number}</small></div>
               <div className="alignment-topic"><span className={`alignment-status alignment-status--${item.status}`}><i />{statusLabels[item.status]}</span><h3>{item.topic}</h3><p>{item.note}</p></div>
               <div className="alignment-source"><span>Start here</span><strong>{item.primary}</strong><small>{item.pages}</small></div>
               <div className="alignment-support"><span>Support / review</span><p>{item.support}</p>{reviewControls(item.id)}</div>

@@ -8,9 +8,17 @@ export type LessonStep = {
   cue: string;
   detail: string;
   connect: string;
+  hint?: string;
+  check?: string;
 };
 
-export type RecallQuestion = { q: string; a: string };
+export type RecallQuestion = {
+  q: string;
+  a: string;
+  hint?: string;
+  options?: string[];
+  followUp?: string;
+};
 
 type SourceReference = {
   id: string;
@@ -44,6 +52,10 @@ export function ProfessorLessonWorkspace({
   const [notes, setNotes] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [revealed, setRevealed] = useState<number[]>([]);
+  const [stepHelp, setStepHelp] = useState<Record<number, number>>({});
+  const [recallHelp, setRecallHelp] = useState<Record<number, number>>({});
+  const [reviewState, setReviewState] = useState<Record<number, string>>({});
+  const [reviewSaving, setReviewSaving] = useState<number | null>(null);
   const [sources, setSources] = useState<SourceReference[]>([]);
   const [sourceMode, setSourceMode] = useState("Loading the approved reading route…");
 
@@ -100,6 +112,31 @@ export function ProfessorLessonWorkspace({
     } catch { setSaveState("error"); }
   }
 
+  async function rateRecall(index: number, item: RecallQuestion, rating: "again" | "hard" | "good") {
+    setReviewSaving(index);
+    setReviewState((current) => ({ ...current, [index]: "Scheduling…" }));
+    try {
+      const response = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          lessonSlug,
+          questionKey: `recall-${index + 1}`,
+          question: item.q,
+          answer: item.a,
+          rating,
+        }),
+      });
+      if (!response.ok) throw new Error("Review could not be scheduled.");
+      const labels = { again: "Back in about 10 minutes", hard: "Kept close for another review", good: "Scheduled at a longer interval" };
+      setReviewState((current) => ({ ...current, [index]: labels[rating] }));
+    } catch {
+      setReviewState((current) => ({ ...current, [index]: "Could not schedule yet. Please try again." }));
+    } finally {
+      setReviewSaving(null);
+    }
+  }
+
   return (
     <div className="lesson-page">
       <header className="lesson-heading">
@@ -135,9 +172,16 @@ export function ProfessorLessonWorkspace({
 
       <section className="lesson-grid">
         <article className="professor-card">
-          <header><div className="professor-avatar"><span>Prof.</span><b>V</b></div><div><span className="eyebrow">Point {activeStep + 1} of {steps.length}</span><h2>{step.title}</h2></div><span className="teaching-live"><i /> Professor explanation</span></header>
+          <header><div className="professor-avatar"><span>Prof.</span><b>V</b></div><div><span className="eyebrow">Adaptive Professor Mode · Point {activeStep + 1} of {steps.length}</span><h2>{step.title}</h2></div><span className="teaching-live"><i /> Professor explanation</span></header>
           <div className="professor-cue"><span>Start here</span><blockquote>{step.cue}</blockquote></div>
-          <div className="professor-detail"><span className="detail-number">{String(activeStep + 1).padStart(2, "0")}</span><div><h3>Walk through it</h3><p>{step.detail}</p><aside><span aria-hidden="true">↗</span><p><strong>Clinical connection</strong>{step.connect}</p></aside></div></div>
+          <div className="professor-detail"><span className="detail-number">{String(activeStep + 1).padStart(2, "0")}</span><div><h3>Walk through it</h3><p>{step.detail}</p>
+            <div className="adaptive-help">
+              <header><span>Adaptive help</span><small>Choose how much support you need.</small></header>
+              <div><button type="button" className={stepHelp[activeStep] >= 1 ? "is-active" : ""} onClick={() => setStepHelp((current) => ({ ...current, [activeStep]: Math.max(current[activeStep] ?? 0, 1) }))}>Simplify this</button><button type="button" className={stepHelp[activeStep] >= 2 ? "is-active" : ""} onClick={() => setStepHelp((current) => ({ ...current, [activeStep]: Math.max(current[activeStep] ?? 0, 2) }))}>Check understanding</button></div>
+              {stepHelp[activeStep] >= 1 ? <p><strong>Plain-language version:</strong> {step.hint ?? step.cue}</p> : null}
+              {stepHelp[activeStep] >= 2 ? <p><strong>Quick check:</strong> {step.check ?? `Can you explain why “${step.title}” happens before moving on?`}</p> : null}
+            </div>
+            <aside><span aria-hidden="true">↗</span><p><strong>Clinical connection</strong>{step.connect}</p></aside></div></div>
           <footer><button className="lesson-back" type="button" disabled={activeStep === 0} onClick={() => setActiveStep((current) => Math.max(0, current - 1))}>← Previous</button><button className="lesson-next" type="button" onClick={advance}>{nextLabel}<span>→</span></button></footer>
         </article>
 
@@ -155,7 +199,17 @@ export function ProfessorLessonWorkspace({
         <header className="section-header"><div><span className="eyebrow">Step 9 · Close the notes</span><h2>Active recall checkpoint</h2></div><span>{revealed.length} of {recallQuestions.length} revealed</span></header>
         <div className="recall-grid">{recallQuestions.map((item, index) => {
           const isRevealed = revealed.includes(index);
-          return <button type="button" className={isRevealed ? "is-revealed" : ""} key={item.q} onClick={() => setRevealed((current) => isRevealed ? current.filter((value) => value !== index) : [...current, index])}><span>Question {index + 1}</span><strong>{item.q}</strong><p>{isRevealed ? item.a : "Answer aloud, then reveal"}</p><b>{isRevealed ? "Hide answer" : "Reveal answer"} →</b></button>;
+          const helpLevel = recallHelp[index] ?? 0;
+          return <article className={isRevealed ? "is-revealed" : ""} key={item.q}>
+            <span>Question {index + 1}</span><strong>{item.q}</strong>
+            {!isRevealed ? <p>Answer aloud before using help.</p> : <div className="recall-answer"><small>Clean answer</small><p>{item.a}</p>{item.followUp ? <em>Push it further: {item.followUp}</em> : null}</div>}
+            {!isRevealed ? <div className="recall-help-actions"><button type="button" onClick={() => setRecallHelp((current) => ({ ...current, [index]: Math.max(helpLevel, 1) }))}>Need a hint</button>{item.options?.length ? <button type="button" onClick={() => setRecallHelp((current) => ({ ...current, [index]: Math.max(helpLevel, 2) }))}>Show options</button> : null}</div> : null}
+            {!isRevealed && helpLevel >= 1 ? <p className="recall-hint"><strong>Hint:</strong> {item.hint ?? "Return to the pressure, flow, or volume relationship taught above."}</p> : null}
+            {!isRevealed && helpLevel >= 2 && item.options?.length ? <ol className="recall-options">{item.options.map((option) => <li key={option}>{option}</li>)}</ol> : null}
+            <button className="recall-reveal" type="button" onClick={() => setRevealed((current) => isRevealed ? current.filter((value) => value !== index) : [...current, index])}>{isRevealed ? "Hide answer" : "Reveal answer"} →</button>
+            {isRevealed ? <div className="recall-rating"><span>How did it feel?</span><button type="button" disabled={reviewSaving === index} onClick={() => rateRecall(index, item, "again")}>Again</button><button type="button" disabled={reviewSaving === index} onClick={() => rateRecall(index, item, "hard")}>Hard</button><button type="button" disabled={reviewSaving === index} onClick={() => rateRecall(index, item, "good")}>Good</button></div> : null}
+            {reviewState[index] ? <small className="recall-scheduled">{reviewState[index]} · <a href="/review">Open queue</a></small> : null}
+          </article>;
         })}</div>
       </section>
 
