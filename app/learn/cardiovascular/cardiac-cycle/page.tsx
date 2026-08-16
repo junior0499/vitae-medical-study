@@ -3,7 +3,7 @@ import { VitaeFrame } from "@/components/vitae-frame";
 import { LessonWorkspace } from "./lesson-workspace";
 
 export const metadata: Metadata = {
-  title: "The Cardiac Cycle · Vitae",
+  title: "The Cardiac Cycle · Poh-tah-toh",
   description: "A paced, visual Professor Mode lesson on the cardiac cycle.",
 };
 

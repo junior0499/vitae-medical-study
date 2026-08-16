@@ -109,7 +109,7 @@ export function LibraryWorkspace() {
   return (
     <div className="library-page">
       <header className="library-heading">
-        <div><span className="eyebrow"><i /> Private source library</span><h1>Bring your semester<br />into one place.</h1><p>Upload syllabi, textbooks, and lecture notes. Vitae preserves the semester and subject so each source can support the right lesson later.</p></div>
+        <div><span className="eyebrow"><i /> Private source library</span><h1>Bring your semester<br />into one place.</h1><p>Upload syllabi, textbooks, and lecture notes. Poh-tah-toh preserves the semester and subject so each source can support the right lesson later.</p></div>
         <div className="library-metrics"><span><strong>{documents.length}</strong><small>saved sources</small></span><span><strong>{new Set(documents.map((item) => item.subject)).size}</strong><small>subjects</small></span><span><strong>7</strong><small>semesters ready</small></span></div>
       </header>
 
@@ -137,7 +137,7 @@ export function LibraryWorkspace() {
         </form>
 
         <aside className="source-flow-card">
-          <span className="eyebrow">How Vitae uses sources</span><h2>Your material stays traceable.</h2>
+          <span className="eyebrow">How Poh-tah-toh uses sources</span><h2>Your material stays traceable.</h2>
           <ol><li><span>1</span><div><strong>Upload the syllabus</strong><p>Keep the official learning requirements.</p></div></li><li><span>2</span><div><strong>Add the alignment & contents</strong><p>Preserve the approved chapter plan.</p></div></li><li><span>3</span><div><strong>Add selected book sections</strong><p>Attach title, edition, chapter and pages.</p></div></li></ol>
           <div><span aria-hidden="true">⌁</span><p><strong>Independent fast path</strong>Each book section uploads and processes on its own. A difficult file cannot hold up the rest, and failed sections stay selected for a simple retry.</p></div>
           <a className="source-map-link" href="/alignment">Review the chapter map <span>→</span></a>

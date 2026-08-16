@@ -26,9 +26,9 @@ export function VitaeFrame({ active, title, subtitle, children }: VitaeFrameProp
     <div className="site-shell">
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <aside className="sidebar" aria-label="Primary navigation">
-        <a className="brand" href="/" aria-label="Vitae home">
-          <span className="brand-mark" aria-hidden="true"><i /><b>V</b></span>
-          <span><strong>vitae</strong><small>medical study</small></span>
+        <a className="brand" href="/" aria-label="Poh-tah-toh home">
+          <span className="brand-mark" aria-hidden="true" />
+          <span><strong>Poh-tah-toh</strong><small>medical study</small></span>
         </a>
         <nav className="side-nav">
           {navItems.map((item) => (
@@ -46,7 +46,7 @@ export function VitaeFrame({ active, title, subtitle, children }: VitaeFrameProp
       </aside>
       <main id="main-content" className="main" tabIndex={-1}>
         <header className="topbar">
-          <div className="mobile-brand"><span className="brand-mark" aria-hidden="true"><i /><b>V</b></span><strong>vitae</strong></div>
+          <div className="mobile-brand"><span className="brand-mark" aria-hidden="true" /><strong>Poh-tah-toh</strong></div>
           <div className="topbar-copy"><span>{subtitle}</span><strong>{title}</strong></div>
           <div className="topbar-actions">
             <a className="frame-action" href="/library"><span aria-hidden="true">＋</span>Add a source</a>

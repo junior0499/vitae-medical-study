@@ -124,7 +124,7 @@ export function CoverageWorkspace() {
         </div>
       </section>
 
-      <section className="coverage-trust"><span>⌁</span><div><strong>Draft generation has a source gate.</strong><p>Vitae will only prepare a lesson outline after you approve the mapping and upload a matching book section. It does not invent textbook quotations.</p></div><a href="/library">Upload book section</a></section>
+      <section className="coverage-trust"><span>⌁</span><div><strong>Draft generation has a source gate.</strong><p>Poh-tah-toh will only prepare a lesson outline after you approve the mapping and upload a matching book section. It does not invent textbook quotations.</p></div><a href="/library">Upload book section</a></section>
     </div>
   );
 }

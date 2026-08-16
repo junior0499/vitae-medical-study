@@ -3,7 +3,7 @@ import { VitaeFrame } from "@/components/vitae-frame";
 import { AlignmentWorkspace } from "./alignment-workspace";
 
 export const metadata: Metadata = {
-  title: "Book–Syllabus Alignment · Vitae",
+  title: "Book–Syllabus Alignment · Poh-tah-toh",
   description: "See which verified textbook chapters support every Internal Medicine syllabus topic.",
 };
 

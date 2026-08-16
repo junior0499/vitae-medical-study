@@ -1,6 +1,6 @@
-# Vitae
+# Poh-tah-toh
 
-Vitae is a private, source-grounded learning workspace for a medical student. It connects the university syllabus, selected book sections, foundation-first lessons, assessment, correction, recall, and evidence-based progress in one fast interface.
+Poh-tah-toh is a private, source-grounded learning workspace for a medical student. It connects the university syllabus, selected book sections, foundation-first lessons, assessment, correction, recall, and evidence-based progress in one fast interface.
 
 ## Highlights
 

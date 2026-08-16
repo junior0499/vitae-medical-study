@@ -263,7 +263,7 @@ const alignments: AlignmentRow[] = [
     topic: "Occupational/environmental disease, sarcoidosis and cystic fibrosis",
     primary: "HPIM 21e · Chs. 289, 367, 291", pages: "PDF pp.2207, 2870, 2217",
     support: "Three separate direct chapters", status: "review",
-    note: "The syllabus groups unrelated diseases together. Vitae separates them into occupational disease, sarcoidosis and cystic fibrosis lessons.",
+    note: "The syllabus groups unrelated diseases together. Poh-tah-toh separates them into occupational disease, sarcoidosis and cystic fibrosis lessons.",
   },
   {
     id: "rs-5-10", system: "Respiratory", week: "V", number: "10",
@@ -448,7 +448,7 @@ export function AlignmentWorkspace() {
         </div>
       </header>
 
-      <section className="alignment-steps alignment-steps--six" aria-label="ChatGPT to Vitae source workflow">
+      <section className="alignment-steps alignment-steps--six" aria-label="ChatGPT to Poh-tah-toh source workflow">
         <article className="is-complete"><span>1</span><div><strong>Syllabus reviewed</strong><small>Objectives, weeks and literature</small></div><b>✓</b></article>
         <article className="is-complete"><span>2</span><div><strong>Books identified</strong><small>Titles, authors and editions</small></div><b>✓</b></article>
         <article className="is-complete"><span>3</span><div><strong>Topic routes drafted</strong><small>Exact pages stay visibly unverified</small></div><b>✓</b></article>
@@ -459,12 +459,12 @@ export function AlignmentWorkspace() {
 
       <aside className="identity-warning" aria-labelledby="identity-warning-title">
         <span aria-hidden="true">!</span>
-        <div><strong id="identity-warning-title">Course identity needs confirmation</strong><p>The filename says “Internal medicine 1,” the document title says “Internal Medicine IV,” its objective mentions seventh-semester students, and the semester grid appears to mark Semester IX. The clinical topic map remains usable, but Vitae will not silently assign the wrong official semester.</p></div>
+        <div><strong id="identity-warning-title">Course identity needs confirmation</strong><p>The filename says “Internal medicine 1,” the document title says “Internal Medicine IV,” its objective mentions seventh-semester students, and the semester grid appears to mark Semester IX. The clinical topic map remains usable, but Poh-tah-toh will not silently assign the wrong official semester.</p></div>
         <span>Needs review</span>
       </aside>
 
       <section id="alignment-import" className="alignment-import" aria-labelledby="alignment-import-title">
-        <div className="import-copy"><span className="eyebrow">Step 6 · Bring in a ChatGPT plan</span><h2 id="alignment-import-title">Paste or import an alignment table.</h2><p>Use CSV, TSV, plain text, or a Markdown table. Vitae stores every imported row as a draft until you approve it.</p><div><strong>Required columns</strong><span>Topic</span><span>Primary source or chapter</span><small>Optional: system, week, pages, support, status, note</small></div></div>
+        <div className="import-copy"><span className="eyebrow">Step 6 · Bring in a ChatGPT plan</span><h2 id="alignment-import-title">Paste or import an alignment table.</h2><p>Use CSV, TSV, plain text, or a Markdown table. Poh-tah-toh stores every imported row as a draft until you approve it.</p><div><strong>Required columns</strong><span>Topic</span><span>Primary source or chapter</span><small>Optional: system, week, pages, support, status, note</small></div></div>
         <form onSubmit={importAlignment}>
           <label><span>Alignment name</span><input value={importTitle} onChange={(event) => setImportTitle(event.target.value)} maxLength={120} /></label>
           <label className="import-file"><span>Choose CSV, TSV, or text</span><input ref={fileRef} type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" onChange={(event) => readImportFile(event.target.files?.[0])} /></label>

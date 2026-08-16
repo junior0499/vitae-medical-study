@@ -113,7 +113,7 @@ export function LearnHub() {
         <div>
           <span className="eyebrow"><i /> Semester 7 · Clinical subjects</span>
           <h1>Choose the subject.<br />Then build the system.</h1>
-          <p>Vitae now follows your university subjects first. Inside each subject, move through its clinical systems from normal foundations to recognition and clinical reasoning.</p>
+          <p>Poh-tah-toh now follows your university subjects first. Inside each subject, move through its clinical systems from normal foundations to recognition and clinical reasoning.</p>
           <div className="learn-hero-actions"><a className="primary-button primary-button--dark" href={currentHref}>Continue {currentTitle.toLowerCase()} <span>→</span></a><a href="#clinical-subjects">See all subjects</a></div>
         </div>
         <div className="route-summary">

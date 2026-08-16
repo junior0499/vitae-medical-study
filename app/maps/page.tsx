@@ -3,7 +3,7 @@ import { VitaeFrame } from "@/components/vitae-frame";
 import { MapsWorkspace } from "./maps-workspace";
 
 export const metadata: Metadata = {
-  title: "My Sideways Maps · Vitae",
+  title: "My Sideways Maps · Poh-tah-toh",
   description: "Review connected sideways maps created from your own lesson notes.",
 };
 

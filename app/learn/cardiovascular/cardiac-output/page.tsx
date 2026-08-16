@@ -3,7 +3,7 @@ import { VitaeFrame } from "@/components/vitae-frame";
 import { LessonWorkspace } from "./lesson-workspace";
 
 export const metadata: Metadata = {
-  title: "Cardiac Output · Vitae",
+  title: "Cardiac Output · Poh-tah-toh",
   description: "A paced, visual Professor Mode lesson on cardiac output and stroke volume.",
 };
 

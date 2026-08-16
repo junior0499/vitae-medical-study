@@ -1,4 +1,4 @@
-const CACHE_NAME = "vitae-travel-v1";
+const CACHE_NAME = "poh-tah-toh-travel-v2";
 const APP_SHELL = ["/", "/learn", "/routes", "/assessment", "/review", "/mistakes", "/maps", "/offline"];
 
 self.addEventListener("install", (event) => {

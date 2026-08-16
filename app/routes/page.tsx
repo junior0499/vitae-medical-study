@@ -3,7 +3,7 @@ import { VitaeFrame } from "@/components/vitae-frame";
 import { subjectRoutes } from "@/lib/learning-routes";
 
 export const metadata: Metadata = {
-  title: "Clinical Learning Routes · Vitae",
+  title: "Clinical Learning Routes · Poh-tah-toh",
   description: "Foundation-first learning sequences for every Semester 7 clinical subject.",
 };
 

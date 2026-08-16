@@ -3,7 +3,7 @@ import { VitaeFrame } from "@/components/vitae-frame";
 import { LibraryWorkspace } from "./library-workspace";
 
 export const metadata: Metadata = {
-  title: "Source Library · Vitae",
+  title: "Source Library · Poh-tah-toh",
   description: "Organize medical syllabi, textbooks and lecture notes by semester and subject.",
 };
 

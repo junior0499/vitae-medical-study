@@ -3,7 +3,7 @@ import { VitaeFrame } from "@/components/vitae-frame";
 import { CoverageWorkspace } from "./coverage-workspace";
 
 export const metadata: Metadata = {
-  title: "Syllabus Coverage · Vitae",
+  title: "Syllabus Coverage · Poh-tah-toh",
   description: "Track every Semester 7 clinical objective from source mapping to lesson and review.",
 };
 

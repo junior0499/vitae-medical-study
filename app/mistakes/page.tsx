@@ -3,7 +3,7 @@ import { VitaeFrame } from "@/components/vitae-frame";
 import { MistakeWorkspace } from "./mistake-workspace";
 
 export const metadata: Metadata = {
-  title: "Mistake Notebook · Vitae",
+  title: "Mistake Notebook · Poh-tah-toh",
   description: "Turn incorrect answers into corrected concepts with sources and review dates.",
 };
 

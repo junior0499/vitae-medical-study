@@ -3,7 +3,7 @@ import { VitaeFrame } from "@/components/vitae-frame";
 import { AssessmentWorkspace } from "./assessment-workspace";
 
 export const metadata: Metadata = {
-  title: "Clinical Assessment Centre · Vitae",
+  title: "Clinical Assessment Centre · Poh-tah-toh",
   description: "Practise source-trailed MCQs, SAQs, Mini-OSCEs, clinical cases, and timed foundation checks.",
 };
 

@@ -3,7 +3,7 @@ import { VitaeFrame } from "@/components/vitae-frame";
 import { LearnHub } from "./learn-hub";
 
 export const metadata: Metadata = {
-  title: "Clinical Subjects · Vitae",
+  title: "Clinical Subjects · Poh-tah-toh",
   description: "Study Semester 7 by clinical subject, system, and foundation lesson.",
 };
 

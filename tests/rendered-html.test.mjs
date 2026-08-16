@@ -25,18 +25,20 @@ async function render(pathname = "/") {
   );
 }
 
-test("server-renders the Vitae medical study dashboard", async () => {
+test("server-renders the Poh-tah-toh medical study dashboard", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>Vitae — Medical Study Companion<\/title>/i);
+  assert.match(html, /<title>Poh-tah-toh — Medical Study Companion<\/title>/i);
+  assert.match(html, /Poh-tah-toh/);
+  assert.match(html, /cat-icon-192\.png/);
   assert.match(html, /Good morning, Aanya\./);
   assert.match(html, /The cardiac cycle/);
   assert.match(html, /Today(?:&#x27;|&apos;|')s plan/);
   assert.match(html, /Atlas · Study companion/);
-  assert.match(html, /Medicine, made learnable/);
+  assert.match(html, /Poh-tah-toh helps you learn medicine/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
 
@@ -179,12 +181,13 @@ test("declares durable learning, assessment, correction, map, review, and docume
   assert.match(mindMapRouteText, /nodesJson/);
   assert.match(masteryRouteText, /assessmentComponent/);
   assert.match(serviceWorkerText, /CACHE_TRAVEL_PACK/);
-  assert.match(manifestText, /Vitae Medical Study Companion/);
+  assert.match(manifestText, /Poh-tah-toh Medical Study Companion/);
+  assert.match(manifestText, /cat-icon-512\.png/);
   assert.match(lessonSourceRegistryText, /foundation-03/);
   assert.match(lessonSourceRegistryText, /foundation-04/);
 });
 
-test("removes the disposable starter and includes production social metadata", async () => {
+test("removes the disposable starter and includes production brand metadata", async () => {
   const [page, layout, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -193,11 +196,12 @@ test("removes the disposable starter and includes production social metadata", a
 
   assert.match(page, /export default function Home/);
   assert.match(page, /Foundation before disease/);
-  assert.match(layout, /Vitae — Medical Study Companion/);
-  assert.match(layout, /\/og\.png/);
+  assert.match(layout, /Poh-tah-toh — Medical Study Companion/);
+  assert.match(layout, /cat-icon-192\.png/);
   assert.doesNotMatch(page, /_sites-preview|SkeletonPreview/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
 
-  await assert.doesNotReject(access(new URL("../public/og.png", import.meta.url)));
+  await assert.doesNotReject(access(new URL("../public/cat-icon-192.png", import.meta.url)));
+  await assert.doesNotReject(access(new URL("../public/cat-icon-512.png", import.meta.url)));
   await assert.rejects(access(new URL("app/_sites-preview", templateRoot)));
 });
