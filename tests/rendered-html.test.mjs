@@ -56,9 +56,13 @@ test("renders the curriculum, source alignment, Professor Mode lesson, and sourc
   const [learnHtml, alignmentHtml, lessonHtml, outputHtml, libraryHtml] = await Promise.all([
     learnResponse.text(), alignmentResponse.text(), lessonResponse.text(), outputResponse.text(), libraryResponse.text(),
   ]);
-  assert.match(learnHtml, /Build the body before/);
+  assert.match(learnHtml, /Choose the subject/);
+  assert.match(learnHtml, /Internal Medicine I/);
+  assert.match(learnHtml, /Perioperative Medicine I/);
+  assert.match(learnHtml, /Women &amp; Child Health I/);
+  assert.match(learnHtml, /Subject.*Clinical system.*Lesson/s);
   assert.match(learnHtml, /Cardiovascular route/);
-  assert.match(learnHtml, /30 syllabus topic groups/);
+  assert.match(learnHtml, /30 Internal Medicine topic groups/);
   assert.match(alignmentHtml, /Every topic now has/);
   assert.match(alignmentHtml, /Course identity needs confirmation/);
   assert.match(alignmentHtml, /Foundation-first source bridge/);
