@@ -184,3 +184,17 @@ export const learningActivityAttempts = sqliteTable("learning_activity_attempts"
   index("idx_learning_activity_owner_type_completed").on(table.ownerId, table.activityType, table.completedAt),
   index("idx_learning_activity_owner_activity").on(table.ownerId, table.activityId),
 ]);
+
+export const learningVersions = sqliteTable("learning_versions", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityKey: text("entity_key").notNull(),
+  action: text("action").notNull().default("saved"),
+  summary: text("summary").notNull().default(""),
+  payloadJson: text("payload_json").notNull(),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("idx_learning_versions_owner_created").on(table.ownerId, table.createdAt),
+  index("idx_learning_versions_owner_entity_created").on(table.ownerId, table.entityType, table.entityKey, table.createdAt),
+]);

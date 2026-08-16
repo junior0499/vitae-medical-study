@@ -204,7 +204,7 @@ test("declares durable learning, adaptive application, correction, map, review, 
   assert.match(attemptsText, /mistakeNotebook/);
   assert.match(mistakesRouteText, /nextReviewAt/);
   assert.match(mindMapRouteText, /nodesJson/);
-  assert.match(masteryRouteText, /assessmentComponent/);
+  assert.match(masteryRouteText, /calculateMastery/);
   assert.match(serviceWorkerText, /CACHE_TRAVEL_PACK/);
   assert.match(serviceWorkerText, /learning-graph/);
   assert.match(manifestText, /Poh-tah-toh Medical Study Companion/);
@@ -253,6 +253,52 @@ test("renders oral viva, comparison, interleaving, confidence, and exam-blueprin
   assert.match(blueprintApi, /coverageObjectives/);
   assert.match(advancedLearning, /Requires an approved clinical source/);
   assert.match(engineApi, /Hidden certainty risk/);
+});
+
+test("renders approved-source search, recoverable history, and private backup", async () => {
+  const [toolsResponse, searchResponse, historyResponse, backupResponse] = await Promise.all([
+    render("/study-tools"),
+    render("/source-search"),
+    render("/history"),
+    render("/backup"),
+  ]);
+  for (const response of [toolsResponse, searchResponse, historyResponse, backupResponse]) assert.equal(response.status, 200);
+  const [toolsHtml, searchHtml, historyHtml, backupHtml] = await Promise.all([
+    toolsResponse.text(), searchResponse.text(), historyResponse.text(), backupResponse.text(),
+  ]);
+  assert.match(toolsHtml, /Your sources and work/);
+  assert.match(toolsHtml, /Smart source search/);
+  assert.match(searchHtml, /Search the approved shelf/);
+  assert.match(searchHtml, /approved syllabus mapping/);
+  assert.match(historyHtml, /Return to an earlier idea/);
+  assert.match(historyHtml, /safety copy/);
+  assert.match(backupHtml, /One private archive/);
+  assert.match(backupHtml, /Internal identity removed/);
+
+  const [migration, runtimeSchema, sourceApi, historyApi, backupApi, learningHistory, masteryCalculation, serviceWorker] = await Promise.all([
+    readFile(new URL("../drizzle/0005_hard_maestro.sql", import.meta.url), "utf8"),
+    readFile(new URL("../db/runtime-schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/source-search/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/history/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/backup/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/learning-history.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/mastery-calculation.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(migration, /CREATE TABLE `learning_versions`/);
+  assert.match(runtimeSchema, /CREATE TABLE IF NOT EXISTS learning_versions/);
+  assert.match(sourceApi, /decision === "approved"/);
+  assert.match(sourceApi, /Book section/);
+  assert.match(sourceApi, /#page=/);
+  assert.match(historyApi, /pre_rollback/);
+  assert.match(historyApi, /recordLearningVersion/);
+  assert.match(learningHistory, /payloadJson/);
+  assert.match(backupApi, /delete safe\.ownerId/);
+  assert.match(backupApi, /delete safe\.objectKey/);
+  assert.match(backupApi, /content-disposition/);
+  assert.match(masteryCalculation, /assessmentComponent/);
+  assert.match(serviceWorker, /poh-tah-toh-travel-v5/);
+  assert.match(serviceWorker, /source-search/);
 });
 
 test("removes the disposable starter and includes production brand metadata", async () => {

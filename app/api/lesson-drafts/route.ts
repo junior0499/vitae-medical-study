@@ -4,6 +4,7 @@ import { alignmentReviews, documentSourceDetails, lessonDrafts, studyDocuments }
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 import { findCoverageObjective } from "@/lib/subject-alignments";
+import { recordLearningVersion } from "@/lib/learning-history";
 
 function subjectMatches(documentSubject: string, objectiveSubject: string) {
   const normalizedDocument = documentSubject.toLowerCase().replace(/\bi\b/g, "").replace(/[^a-z&]+/g, " ").trim();
@@ -84,6 +85,7 @@ export async function POST(request: Request) {
     }).onConflictDoUpdate({
       target: [lessonDrafts.ownerId, lessonDrafts.alignmentId], set: values,
     }).returning();
+    await recordLearningVersion({ ownerId, entityType: "lesson_draft", entityKey: alignmentId, summary: `${objective.topic} · ${sourceLabel}`, payload: { alignmentId, sourceDocumentId: sourceDocument.id, lessonSlug, subject: objective.subject, system: objective.system, title: objective.topic, status: "draft", outlineJson: values.outlineJson, createdAt: draft.createdAt, updatedAt: now }, createdAt: now });
     return Response.json({ draft, outline }, { status: 201 });
   } catch {
     return Response.json({ error: "The source-locked lesson draft could not be created." }, { status: 500 });

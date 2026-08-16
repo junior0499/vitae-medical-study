@@ -17,6 +17,9 @@ Poh-tah-toh is a private, source-grounded learning workspace for a medical stude
 - mastery scores based on lessons, notes, assessment, and recall evidence
 - independent book-section uploads with partial failure and retry
 - offline travel packs with locally queued notes and recall ratings
+- approved-source search with chapter and PDF page-range jumps
+- recoverable history for notes, maps, source decisions, and lesson drafts
+- private structured backup of learning, assessment, mastery, and source records
 - accessible, responsive layout for desktop and mobile
 - private owner-only Sites deployment
 

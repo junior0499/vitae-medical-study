@@ -3,6 +3,7 @@ import { getDb } from "@/db";
 import { alignmentReviews, importedAlignments } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
+import { recordLearningVersion } from "@/lib/learning-history";
 
 const decisions = new Set(["pending", "approved", "changes_requested"]);
 const knownStatuses = new Set([
@@ -137,6 +138,7 @@ export async function PATCH(request: Request) {
       target: [alignmentReviews.ownerId, alignmentReviews.alignmentId],
       set: { decision, reviewerNote, updatedAt },
     }).returning();
+    await recordLearningVersion({ ownerId, entityType: "alignment_review", entityKey: alignmentId, summary: `${decision.replaceAll("_", " ")}${reviewerNote ? ` · ${reviewerNote}` : ""}`, payload: { alignmentId, decision, reviewerNote, updatedAt }, createdAt: updatedAt });
     return Response.json({ review });
   } catch {
     return Response.json({ error: "The review decision could not be saved." }, { status: 500 });

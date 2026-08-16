@@ -194,6 +194,20 @@ export function ensureVitaeSchema() {
       ON learning_activity_attempts(owner_id, activity_type, completed_at)`),
     database.prepare(`CREATE INDEX IF NOT EXISTS idx_learning_activity_owner_activity
       ON learning_activity_attempts(owner_id, activity_id)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS learning_versions (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_key TEXT NOT NULL,
+      action TEXT DEFAULT 'saved' NOT NULL,
+      summary TEXT DEFAULT '' NOT NULL,
+      payload_json TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_learning_versions_owner_created
+      ON learning_versions(owner_id, created_at)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_learning_versions_owner_entity_created
+      ON learning_versions(owner_id, entity_type, entity_key, created_at)`),
     database.prepare("PRAGMA optimize"),
   ]).then(() => undefined).catch((error) => {
     schemaPromise = null;

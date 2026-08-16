@@ -3,6 +3,7 @@ import { getDb } from "@/db";
 import { lessonNotes } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
+import { recordLearningVersion } from "@/lib/learning-history";
 
 export async function GET(request: Request) {
   const ownerId = getCurrentOwnerId(request);
@@ -42,6 +43,7 @@ export async function PUT(request: Request) {
       target: [lessonNotes.ownerId, lessonNotes.lessonSlug],
       set: { content, updatedAt: now },
     }).returning();
+    await recordLearningVersion({ ownerId, entityType: "note", entityKey: lessonSlug, summary: content.trim().replace(/\s+/g, " ").slice(0, 180) || "Empty note", payload: { lessonSlug, content, updatedAt: now }, createdAt: now });
     return Response.json({ note: saved });
   } catch {
     return Response.json({ error: "Notes could not be saved." }, { status: 500 });

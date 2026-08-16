@@ -3,6 +3,7 @@ import { getDb } from "@/db";
 import { noteMindMaps } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
+import { recordLearningVersion } from "@/lib/learning-history";
 
 type MindMapNode = { label: string; detail: string };
 
@@ -43,6 +44,7 @@ export async function PUT(request: Request) {
     }).onConflictDoUpdate({
       target: [noteMindMaps.ownerId, noteMindMaps.lessonSlug], set: values,
     }).returning();
+    await recordLearningVersion({ ownerId, entityType: "mind_map", entityKey: lessonSlug, summary: `${title} · ${nodes.length} connected points`, payload: { lessonSlug, title, nodesJson: values.nodesJson, createdAt: map.createdAt, updatedAt: now }, createdAt: now });
     return Response.json({ map });
   } catch {
     return Response.json({ error: "The sideways map could not be saved." }, { status: 500 });
