@@ -168,3 +168,19 @@ export const noteMindMaps = sqliteTable("note_mind_maps", {
   uniqueIndex("idx_note_mind_maps_owner_lesson").on(table.ownerId, table.lessonSlug),
   index("idx_note_mind_maps_owner_updated").on(table.ownerId, table.updatedAt),
 ]);
+
+export const learningActivityAttempts = sqliteTable("learning_activity_attempts", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  activityType: text("activity_type").notNull(),
+  activityId: text("activity_id").notNull(),
+  subject: text("subject").notNull(),
+  system: text("system").notNull(),
+  correctCount: integer("correct_count").notNull().default(0),
+  totalCount: integer("total_count").notNull().default(1),
+  detailsJson: text("details_json").notNull(),
+  completedAt: text("completed_at").notNull(),
+}, (table) => [
+  index("idx_learning_activity_owner_type_completed").on(table.ownerId, table.activityType, table.completedAt),
+  index("idx_learning_activity_owner_activity").on(table.ownerId, table.activityId),
+]);

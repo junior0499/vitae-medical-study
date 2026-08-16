@@ -42,8 +42,8 @@ test("server-renders the Poh-tah-toh medical study dashboard", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
 
-test("renders the connected curriculum, assessment, correction, maps, travel mode, and source library", async () => {
-  const [learnResponse, coverageResponse, alignmentResponse, lessonResponse, outputResponse, reviewResponse, libraryResponse, assessmentResponse, mistakesResponse, routesResponse, mapsResponse, offlineResponse] = await Promise.all([
+test("renders the connected curriculum, adaptive engine, application tools, travel mode, and source library", async () => {
+  const [learnResponse, coverageResponse, alignmentResponse, lessonResponse, outputResponse, reviewResponse, libraryResponse, assessmentResponse, mistakesResponse, routesResponse, mapsResponse, offlineResponse, diagnosticResponse, graphResponse, casesResponse, visualLabResponse] = await Promise.all([
     render("/learn"),
     render("/coverage"),
     render("/alignment"),
@@ -56,14 +56,18 @@ test("renders the connected curriculum, assessment, correction, maps, travel mod
     render("/routes"),
     render("/maps"),
     render("/offline"),
+    render("/diagnostic"),
+    render("/learning-graph"),
+    render("/cases"),
+    render("/visual-lab"),
   ]);
 
-  for (const response of [learnResponse, coverageResponse, alignmentResponse, lessonResponse, outputResponse, reviewResponse, libraryResponse, assessmentResponse, mistakesResponse, routesResponse, mapsResponse, offlineResponse]) {
+  for (const response of [learnResponse, coverageResponse, alignmentResponse, lessonResponse, outputResponse, reviewResponse, libraryResponse, assessmentResponse, mistakesResponse, routesResponse, mapsResponse, offlineResponse, diagnosticResponse, graphResponse, casesResponse, visualLabResponse]) {
     assert.equal(response.status, 200);
   }
 
-  const [learnHtml, coverageHtml, alignmentHtml, lessonHtml, outputHtml, reviewHtml, libraryHtml, assessmentHtml, mistakesHtml, routesHtml, mapsHtml, offlineHtml] = await Promise.all([
-    learnResponse.text(), coverageResponse.text(), alignmentResponse.text(), lessonResponse.text(), outputResponse.text(), reviewResponse.text(), libraryResponse.text(), assessmentResponse.text(), mistakesResponse.text(), routesResponse.text(), mapsResponse.text(), offlineResponse.text(),
+  const [learnHtml, coverageHtml, alignmentHtml, lessonHtml, outputHtml, reviewHtml, libraryHtml, assessmentHtml, mistakesHtml, routesHtml, mapsHtml, offlineHtml, diagnosticHtml, graphHtml, casesHtml, visualLabHtml] = await Promise.all([
+    learnResponse.text(), coverageResponse.text(), alignmentResponse.text(), lessonResponse.text(), outputResponse.text(), reviewResponse.text(), libraryResponse.text(), assessmentResponse.text(), mistakesResponse.text(), routesResponse.text(), mapsResponse.text(), offlineResponse.text(), diagnosticResponse.text(), graphResponse.text(), casesResponse.text(), visualLabResponse.text(),
   ]);
   assert.match(learnHtml, /Choose the subject/);
   assert.match(learnHtml, /Internal Medicine I/);
@@ -73,7 +77,8 @@ test("renders the connected curriculum, assessment, correction, maps, travel mod
   assert.match(learnHtml, /Cardiovascular route/);
   assert.match(learnHtml, /68 Semester 7 objectives/);
   assert.match(learnHtml, /28 source-mapped objectives/);
-  assert.match(learnHtml, /Learn, test, correct, connect/);
+  assert.match(learnHtml, /Measure, learn, apply, correct/);
+  assert.match(learnHtml, /Adaptive next step/);
   assert.match(coverageHtml, /Syllabus mastery dashboard/);
   assert.match(coverageHtml, /See what is mapped/);
   assert.match(coverageHtml, /Internal Medicine I/);
@@ -122,16 +127,25 @@ test("renders the connected curriculum, assessment, correction, maps, travel mod
   assert.match(mapsHtml, /Saved sideways maps/);
   assert.match(offlineHtml, /Carry the lesson/);
   assert.match(offlineHtml, /Save core learning pack/);
+  assert.match(diagnosticHtml, /Start where your/);
+  assert.match(diagnosticHtml, /75%/);
+  assert.match(graphHtml, /Every activity has/);
+  assert.match(graphHtml, /Semester 7 objective/);
+  assert.match(casesHtml, /Reason through the case/);
+  assert.match(casesHtml, /Why the case stops at physiology/);
+  assert.match(visualLabHtml, /Read the pattern/);
+  assert.match(visualLabHtml, /Electrical-pattern lab/);
 });
 
-test("declares durable learning, assessment, correction, map, review, and document storage", async () => {
-  const [hostingText, schemaText, migrationText, alignmentMigrationText, learningMigrationText, connectedLearningMigrationText, runtimeSchemaText, documentRouteText, alignmentRouteText, lessonSourceRouteText, lessonDraftRouteText, reviewRouteText, coverageRouteText, assessmentRouteText, mistakesRouteText, mindMapRouteText, masteryRouteText, lessonSourceRegistryText, serviceWorkerText, manifestText] = await Promise.all([
+test("declares durable learning, adaptive application, correction, map, review, and document storage", async () => {
+  const [hostingText, schemaText, migrationText, alignmentMigrationText, learningMigrationText, connectedLearningMigrationText, adaptiveMigrationText, runtimeSchemaText, documentRouteText, alignmentRouteText, lessonSourceRouteText, lessonDraftRouteText, reviewRouteText, coverageRouteText, assessmentRouteText, diagnosticRouteText, caseRouteText, visualRouteText, engineRouteText, attemptsText, mistakesRouteText, mindMapRouteText, masteryRouteText, lessonSourceRegistryText, serviceWorkerText, manifestText] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0000_dark_exodus.sql", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0001_ancient_ulik.sql", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0002_free_scalphunter.sql", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0003_fresh_black_crow.sql", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0004_awesome_shockwave.sql", import.meta.url), "utf8"),
     readFile(new URL("../db/runtime-schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/documents/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/alignments/route.ts", import.meta.url), "utf8"),
@@ -140,6 +154,11 @@ test("declares durable learning, assessment, correction, map, review, and docume
     readFile(new URL("../app/api/reviews/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/coverage/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/assessments/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/diagnostic/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/cases/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/visual-lab/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/learning-engine/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/learning-attempts.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/mistakes/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/mind-maps/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/mastery/route.ts", import.meta.url), "utf8"),
@@ -161,6 +180,7 @@ test("declares durable learning, assessment, correction, map, review, and docume
   assert.match(connectedLearningMigrationText, /CREATE TABLE `assessment_attempts`/);
   assert.match(connectedLearningMigrationText, /CREATE TABLE `mistake_notebook`/);
   assert.match(connectedLearningMigrationText, /CREATE TABLE `note_mind_maps`/);
+  assert.match(adaptiveMigrationText, /CREATE TABLE `learning_activity_attempts`/);
   assert.match(runtimeSchemaText, /CREATE TABLE IF NOT EXISTS lesson_drafts/);
   assert.match(runtimeSchemaText, /CREATE TABLE IF NOT EXISTS recall_reviews/);
   assert.match(documentRouteText, /MAX_FILES = 5/);
@@ -177,10 +197,16 @@ test("declares durable learning, assessment, correction, map, review, and docume
   assert.match(coverageRouteText, /coverageObjectives/);
   assert.match(assessmentRouteText, /assessmentAttempts/);
   assert.match(assessmentRouteText, /mistakeNotebook/);
+  assert.match(diagnosticRouteText, /domainScores/);
+  assert.match(caseRouteText, /clinical_case/);
+  assert.match(visualRouteText, /visual_lab/);
+  assert.match(engineRouteText, /next-best-action|Find your starting point/);
+  assert.match(attemptsText, /mistakeNotebook/);
   assert.match(mistakesRouteText, /nextReviewAt/);
   assert.match(mindMapRouteText, /nodesJson/);
   assert.match(masteryRouteText, /assessmentComponent/);
   assert.match(serviceWorkerText, /CACHE_TRAVEL_PACK/);
+  assert.match(serviceWorkerText, /learning-graph/);
   assert.match(manifestText, /Poh-tah-toh Medical Study Companion/);
   assert.match(manifestText, /cat-icon-512\.png/);
   assert.match(lessonSourceRegistryText, /foundation-03/);

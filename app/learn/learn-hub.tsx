@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { NextBestAction } from "@/components/next-best-action";
 
 type ProgressRow = { lessonSlug: string; completedPoints: number; totalPoints: number; status: string };
 type SubjectId = "internal-medicine" | "perioperative-medicine" | "women-child-health";
@@ -123,6 +124,8 @@ export function LearnHub() {
         </div>
       </header>
 
+      <NextBestAction />
+
       <section id="clinical-subjects" className="clinical-subjects" aria-labelledby="clinical-subjects-title">
         <header className="section-header"><div><span className="eyebrow">Your university subjects</span><h2 id="clinical-subjects-title">Choose a clinical subject</h2></div><a href="/library">Manage subject sources →</a></header>
         <div className="subject-grid">
@@ -170,7 +173,7 @@ export function LearnHub() {
         </div>
       </section> : <section className="subject-next-step"><span aria-hidden="true">⌁</span><div><strong>{selectedSubject.shortTitle} now has a reviewable source map.</strong><p>Exact chapters and pages stay marked for confirmation until you upload the matching contents or book sections.</p></div><a href="/coverage">View coverage</a></section>}
 
-      <section className="learning-tools" aria-labelledby="learning-tools-title"><header className="section-header"><div><span className="eyebrow">Connected learning loop</span><h2 id="learning-tools-title">Learn, test, correct, connect</h2></div><a href="/routes">View every subject route →</a></header><div><a href="/routes"><span>01</span><strong>Subject routes</strong><p>Follow prerequisites before clinical disease.</p></a><a href="/assessment"><span>02</span><strong>Assessment Centre</strong><p>Use source-trailed MCQs, SAQs, and Mini-OSCEs.</p></a><a href="/mistakes"><span>03</span><strong>Mistake notebook</strong><p>Turn every wrong answer into a scheduled correction.</p></a><a href="/maps"><span>04</span><strong>Sideways maps</strong><p>Connect the clean notes you wrote yourself.</p></a><a href="/offline"><span>05</span><strong>Travel mode</strong><p>Carry lightweight lessons and queue private drafts.</p></a></div></section>
+      <section className="learning-tools" aria-labelledby="learning-tools-title"><header className="section-header"><div><span className="eyebrow">Connected learning loop</span><h2 id="learning-tools-title">Measure, learn, apply, correct</h2></div><a href="/learning-graph">Open unified graph →</a></header><div><a href="/diagnostic"><span>01</span><strong>Starting diagnostic</strong><p>Measure both live foundation domains.</p></a><a href="/learning-graph"><span>02</span><strong>Learning graph</strong><p>Trace objectives from source to mastery.</p></a><a href="/cases"><span>03</span><strong>Progressive cases</strong><p>Make one source-grounded decision at a time.</p></a><a href="/visual-lab"><span>04</span><strong>Visual laboratory</strong><p>Interpret pressure and flow patterns.</p></a><a href="/routes"><span>05</span><strong>Subject routes</strong><p>Follow prerequisites before clinical disease.</p></a><a href="/assessment"><span>06</span><strong>Assessment Centre</strong><p>Use source-trailed MCQs, SAQs, and Mini-OSCEs.</p></a><a href="/mistakes"><span>07</span><strong>Mistake notebook</strong><p>Turn every wrong answer into a scheduled correction.</p></a><a href="/maps"><span>08</span><strong>Sideways maps</strong><p>Connect the clean notes you wrote yourself.</p></a><a href="/offline"><span>09</span><strong>Travel mode</strong><p>Carry lightweight lessons and queue private drafts.</p></a></div></section>
 
       <section className="coming-next source-map-promo"><span aria-hidden="true">⌁</span><div><strong>All 68 Semester 7 objectives are visible in one coverage map.</strong><p>Track mapping, approval, uploaded source sections, lesson drafts, and recall review without hiding chapter uncertainty.</p></div><a href="/coverage">Open coverage</a></section>
 

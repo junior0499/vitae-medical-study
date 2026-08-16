@@ -178,6 +178,22 @@ export function ensureVitaeSchema() {
       ON note_mind_maps(owner_id, lesson_slug)`),
     database.prepare(`CREATE INDEX IF NOT EXISTS idx_note_mind_maps_owner_updated
       ON note_mind_maps(owner_id, updated_at)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS learning_activity_attempts (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      activity_type TEXT NOT NULL,
+      activity_id TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      system TEXT NOT NULL,
+      correct_count INTEGER DEFAULT 0 NOT NULL,
+      total_count INTEGER DEFAULT 1 NOT NULL,
+      details_json TEXT NOT NULL,
+      completed_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_learning_activity_owner_type_completed
+      ON learning_activity_attempts(owner_id, activity_type, completed_at)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_learning_activity_owner_activity
+      ON learning_activity_attempts(owner_id, activity_id)`),
     database.prepare("PRAGMA optimize"),
   ]).then(() => undefined).catch((error) => {
     schemaPromise = null;

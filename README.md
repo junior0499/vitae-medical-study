@@ -6,6 +6,9 @@ Poh-tah-toh is a private, source-grounded learning workspace for a medical stude
 
 - 68-objective Semester 7 syllabus coverage and source alignment
 - subject-specific, foundation-first clinical learning routes
+- a domain-scored starting diagnostic and adaptive next-best lesson
+- one unified graph connecting syllabus, sources, lessons, application, correction, and mastery
+- progressive source-limited cases and a visual pressure-and-flow interpretation lab
 - adaptive Professor Mode with private notes and active recall
 - source-trailed MCQs, SAQs, Mini-OSCE scaffolds, and timed checks
 - automatic mistake notebook and sideways note-built mind maps
