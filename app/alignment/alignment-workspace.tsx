@@ -68,13 +68,13 @@ const sources = [
 ];
 
 const foundations = [
-  ["01", "Heart structure & flow", "HCM 2e · Ch. 1", "PDF p.15"],
-  ["02", "Normal conduction", "HPIM 21e · Ch. 243", "PDF p.1907"],
-  ["03", "Cardiac cycle", "Braunwald 12e · Ch. 46", "PDF p.1258"],
-  ["04", "Cardiac output", "HPIM 21e · Ch. 237", "PDF p.1840"],
-  ["05", "Blood pressure", "HPIM 21e · Ch. 277", "PDF p.2113"],
-  ["06", "Normal examination", "Bates 12e · Ch. 9", "PDF p.373"],
-  ["07", "ECG after conduction", "HPIM 21e · Ch. 240", "PDF p.1865"],
+  { id: "foundation-01", number: "01", topic: "Heart structure & flow", chapter: "HCM 2e · Ch. 1", page: "PDF p.15" },
+  { id: "foundation-02", number: "02", topic: "Normal conduction", chapter: "HPIM 21e · Ch. 243", page: "PDF p.1907" },
+  { id: "foundation-03", number: "03", topic: "Cardiac cycle", chapter: "Braunwald 12e · Ch. 46", page: "PDF p.1258", href: "/learn/cardiovascular/cardiac-cycle" },
+  { id: "foundation-04", number: "04", topic: "Cardiac output", chapter: "HPIM 21e · Ch. 237", page: "PDF p.1840", href: "/learn/cardiovascular/cardiac-output" },
+  { id: "foundation-05", number: "05", topic: "Blood pressure", chapter: "HPIM 21e · Ch. 277", page: "PDF p.2113" },
+  { id: "foundation-06", number: "06", topic: "Normal examination", chapter: "Bates 12e · Ch. 9", page: "PDF p.373" },
+  { id: "foundation-07", number: "07", topic: "ECG after conduction", chapter: "HPIM 21e · Ch. 240", page: "PDF p.1865" },
 ];
 
 const alignments: AlignmentRow[] = [
@@ -458,11 +458,24 @@ export function AlignmentWorkspace() {
       <section className="foundation-map" aria-labelledby="foundation-map-title">
         <header className="section-header"><div><span className="eyebrow">Before clinical cardiology</span><h2 id="foundation-map-title">Foundation-first source bridge</h2></div><span>Follow left to right</span></header>
         <div className="foundation-track">
-          {foundations.map(([number, topic, chapter, page], index) => (
-            <article key={number}>
-              <span>{number}</span><strong>{topic}</strong><p>{chapter}</p><small>{page}</small>{index < foundations.length - 1 ? <i aria-hidden="true">→</i> : null}
+          {foundations.map((foundation, index) => (
+            <article key={foundation.id}>
+              <span>{foundation.number}</span><strong>{foundation.topic}</strong><p>{foundation.chapter}</p><small>{foundation.page}</small>
+              {foundation.href ? <a href={foundation.href}>Open lesson →</a> : null}
+              <div className="foundation-review">{reviewControls(foundation.id)}</div>
+              {index < foundations.length - 1 ? <i aria-hidden="true">→</i> : null}
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="lesson-pipeline" aria-labelledby="lesson-pipeline-title">
+        <header className="section-header"><div><span className="eyebrow">Steps 7–10 · Map becomes learning</span><h2 id="lesson-pipeline-title">From approved map to Professor Mode</h2></div><span>Connected and ready</span></header>
+        <div className="alignment-steps">
+          <article className="is-complete"><span>7</span><div><strong>Objective connected</strong><small>Each lesson keeps its mapping ID</small></div><b>✓</b></article>
+          <article className="is-complete"><span>8</span><div><strong>Source trail visible</strong><small>Book, edition, chapter, page and review</small></div><b>✓</b></article>
+          <article className="is-complete"><span>9</span><div><strong>Learning loop verified</strong><small>Recall, private notes and resume</small></div><b>✓</b></article>
+          <article className="is-complete"><span>10</span><div><strong>Next foundation live</strong><small>Cardiac output in Professor Mode</small></div><a href="/learn/cardiovascular/cardiac-output">Open</a></article>
         </div>
       </section>
 
@@ -490,7 +503,7 @@ export function AlignmentWorkspace() {
       </section>
 
       <section className="alignment-next-step">
-        <span aria-hidden="true">✓</span><div><strong>Steps 4–6 are ready.</strong><p>Approve individual mappings, upload the supporting source bundle, and import future ChatGPT alignment tables as private review drafts.</p></div><a href="/library">Upload source bundle</a>
+        <span aria-hidden="true">✓</span><div><strong>The full 1–10 learning pipeline is connected.</strong><p>Approve a foundation mapping here, then open its lesson to see the same decision beside the reading reference.</p></div><a href="/learn/cardiovascular/cardiac-output">Open cardiac output</a>
       </section>
     </div>
   );

@@ -41,19 +41,20 @@ test("server-renders the Vitae medical study dashboard", async () => {
 });
 
 test("renders the curriculum, source alignment, Professor Mode lesson, and source library", async () => {
-  const [learnResponse, alignmentResponse, lessonResponse, libraryResponse] = await Promise.all([
+  const [learnResponse, alignmentResponse, lessonResponse, outputResponse, libraryResponse] = await Promise.all([
     render("/learn"),
     render("/alignment"),
     render("/learn/cardiovascular/cardiac-cycle"),
+    render("/learn/cardiovascular/cardiac-output"),
     render("/library"),
   ]);
 
-  for (const response of [learnResponse, alignmentResponse, lessonResponse, libraryResponse]) {
+  for (const response of [learnResponse, alignmentResponse, lessonResponse, outputResponse, libraryResponse]) {
     assert.equal(response.status, 200);
   }
 
-  const [learnHtml, alignmentHtml, lessonHtml, libraryHtml] = await Promise.all([
-    learnResponse.text(), alignmentResponse.text(), lessonResponse.text(), libraryResponse.text(),
+  const [learnHtml, alignmentHtml, lessonHtml, outputHtml, libraryHtml] = await Promise.all([
+    learnResponse.text(), alignmentResponse.text(), lessonResponse.text(), outputResponse.text(), libraryResponse.text(),
   ]);
   assert.match(learnHtml, /Build the body before/);
   assert.match(learnHtml, /Cardiovascular route/);
@@ -64,11 +65,18 @@ test("renders the curriculum, source alignment, Professor Mode lesson, and sourc
   assert.match(alignmentHtml, /Review &amp; approve/);
   assert.match(alignmentHtml, /Paste or import an alignment table/);
   assert.match(alignmentHtml, /Import as review drafts/);
+  assert.match(alignmentHtml, /Steps 7–10/);
+  assert.match(alignmentHtml, /From approved map to Professor Mode/);
   assert.match(alignmentHtml, /Acute bronchitis/);
   assert.match(alignmentHtml, /No direct source/);
   assert.match(lessonHtml, /Professor Mode/);
   assert.match(lessonHtml, /Sideways concept map/);
+  assert.match(lessonHtml, /Source trail/);
   assert.match(lessonHtml, /Active recall checkpoint/);
+  assert.match(outputHtml, /Cardiac output/);
+  assert.match(outputHtml, /CO = HR × SV/);
+  assert.match(outputHtml, /From one beat to flow per minute/);
+  assert.match(outputHtml, /Professor explanation/);
   assert.match(libraryHtml, /Upload sources/);
   assert.match(libraryHtml, /Book section/);
   assert.match(libraryHtml, /Alignment plan/);
@@ -76,14 +84,16 @@ test("renders the curriculum, source alignment, Professor Mode lesson, and sourc
   assert.match(libraryHtml, /Saved by semester/);
 });
 
-test("declares durable progress, notes, and document storage", async () => {
-  const [hostingText, schemaText, migrationText, alignmentMigrationText, documentRouteText, alignmentRouteText] = await Promise.all([
+test("declares durable progress, notes, source trails, and document storage", async () => {
+  const [hostingText, schemaText, migrationText, alignmentMigrationText, documentRouteText, alignmentRouteText, lessonSourceRouteText, lessonSourceRegistryText] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0000_dark_exodus.sql", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0001_ancient_ulik.sql", import.meta.url), "utf8"),
     readFile(new URL("../app/api/documents/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/alignments/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/lesson-sources/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/lesson-sources.ts", import.meta.url), "utf8"),
   ]);
   const hosting = JSON.parse(hostingText);
   assert.equal(hosting.d1, "DB");
@@ -99,6 +109,9 @@ test("declares durable progress, notes, and document storage", async () => {
   assert.match(documentRouteText, /Book section/);
   assert.match(alignmentRouteText, /parseAlignmentTable/);
   assert.match(alignmentRouteText, /changes_requested/);
+  assert.match(lessonSourceRouteText, /alignmentReviews/);
+  assert.match(lessonSourceRegistryText, /foundation-03/);
+  assert.match(lessonSourceRegistryText, /foundation-04/);
 });
 
 test("removes the disposable starter and includes production social metadata", async () => {
