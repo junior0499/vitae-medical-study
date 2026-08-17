@@ -21,6 +21,10 @@ Poh-tah-toh is a private, source-grounded learning workspace for a medical stude
 - on-device PDF/Word extraction and bounded OCR for deep approved-passage search
 - a source-linked reader with verified highlights and page citations attached to notes
 - citation-first Professor Mode that separates approved evidence from explanation and later connections
+- objective-level evidence chains from syllabus chapter and page through lesson, recall, reviewed questions, and visible gaps
+- an adaptive daily learning queue driven by due work, weakness, mistakes, completion, and assessment evidence
+- spaced repetition informed by accuracy, difficulty, confidence, response time, overdue time, and lapse history
+- an approved-source question studio for human-reviewed MCQ, SAQ, viva, and clinical-case drafts with exact page citations
 - recoverable history for notes, maps, source decisions, and lesson drafts
 - private structured backup of learning, assessment, mastery, and source records
 - accessible, responsive layout for desktop and mobile

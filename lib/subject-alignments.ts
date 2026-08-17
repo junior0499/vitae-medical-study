@@ -101,16 +101,61 @@ export type CoverageObjective = {
   week: string;
   topic: string;
   primarySource: string;
+  pageReference: string;
   mappingStatus: AlignmentStatus;
 };
 
+const internalObjectiveSources: Record<string, { primarySource: string; pageReference: string }> = {
+  "cv-1-1": { primarySource: "HPIM 21e · Chs. 236, 239–240", pageReference: "PDF pp.1838, 1856, 1865" },
+  "cv-1-2": { primarySource: "HPIM 21e · Chs. 241–242", pageReference: "PDF pp.1873, 1900" },
+  "cv-1-3": { primarySource: "HPIM 21e · Chs. 243–256", pageReference: "PDF pp.1907–1968" },
+  "cv-1-4": { primarySource: "HPIM 21e · Chs. 237, 257–258, 283", pageReference: "PDF pp.1840, 1971, 1981, 2162" },
+  "cv-2-5": { primarySource: "HPIM 21e · Chs. 260, 269", pageReference: "PDF pp.2014, 2049" },
+  "cv-2-6": { primarySource: "HPIM 21e · Chs. 261–268", pageReference: "PDF pp.2019–2046" },
+  "cv-2-7": { primarySource: "HPIM 21e · Chs. 259, 128, 270", pageReference: "PDF pp.1995, 1063, 2060" },
+  "cv-2-8": { primarySource: "HPIM 21e · Chs. 271–272", pageReference: "PDF pp.2066, 2069" },
+  "cv-3-9": { primarySource: "HPIM 21e · Ch. 273", pageReference: "PDF p.2071" },
+  "cv-3-10": { primarySource: "HPIM 21e · Chs. 274–275", pageReference: "PDF pp.2087, 2094" },
+  "cv-3-11": { primarySource: "HPIM 21e · Chs. 276–277", pageReference: "PDF pp.2107, 2113" },
+  "cv-3-12": { primarySource: "HPIM 21e · Chs. 280–281", pageReference: "PDF pp.2142, 2148" },
+  "rs-4-1": { primarySource: "HPIM 21e · Chs. 37–39, 284–286", pageReference: "PDF pp.304, 308, 311, 2172–2181" },
+  "rs-4-2": { primarySource: "HPIM 21e · Ch. 287", pageReference: "PDF p.2188" },
+  "rs-4-3": { primarySource: "HPIM 21e · Ch. 292", pageReference: "PDF p.2221" },
+  "rs-4-4": { primarySource: "No dedicated chapter located", pageReference: "No approved page" },
+  "rs-4-5": { primarySource: "HPIM 21e · Ch. 126", pageReference: "PDF p.1050" },
+  "rs-4-6": { primarySource: "HPIM 21e · Chs. 127, 290", pageReference: "PDF pp.1061, 2214" },
+  "rs-5-7": { primarySource: "HPIM 21e · Ch. 178", pageReference: "PDF p.1398" },
+  "rs-5-8": { primarySource: "HPIM 21e · Ch. 363", pageReference: "PDF p.2843" },
+  "rs-5-9": { primarySource: "HPIM 21e · Chs. 289, 367, 291", pageReference: "PDF pp.2207, 2870, 2217" },
+  "rs-5-10": { primarySource: "HPIM 21e · Ch. 293", pageReference: "PDF p.2231" },
+  "rs-5-11": { primarySource: "HPIM 21e · Chs. 301, 78", pageReference: "PDF pp.2266, 635" },
+  "rs-5-12": { primarySource: "HPIM 21e · Chs. 294, 279", pageReference: "PDF pp.2238, 2132" },
+  "rn-6-1": { primarySource: "HPIM 21e · Chs. 308–309", pageReference: "PDF pp.2320, 2328" },
+  "rn-6-2": { primarySource: "HPIM 21e · Chs. 135, 315, 318–319", pageReference: "PDF pp.1111, 2391, 2409, 2414" },
+  "rn-6-3": { primarySource: "HPIM 21e · Ch. 314", pageReference: "PDF p.2372" },
+  "rn-7-4": { primarySource: "HPIM 21e · Ch. 314 + disease chapters", pageReference: "PDF pp.2372, 3161, 2777, 919, 2903" },
+  "rn-7-5": { primarySource: "HPIM 21e · Ch. 310", pageReference: "PDF p.2337" },
+  "rn-7-6": { primarySource: "HPIM 21e · Chs. 311–313", pageReference: "PDF pp.2350, 2361, 2366" },
+};
+
+const objectiveLessonLinks: Record<string, Array<{ slug: string; title: string; href: string }>> = {
+  "cv-1-4": [
+    { slug: "cardiac-cycle", title: "Cardiac cycle", href: "/learn/cardiovascular/cardiac-cycle" },
+    { slug: "cardiac-output", title: "Cardiac output", href: "/learn/cardiovascular/cardiac-output" },
+  ],
+};
+
 export const coverageObjectives: CoverageObjective[] = [
-  ...internalTopics.map(([id, system, week, topic]) => ({ id, subject: "Internal Medicine I" as const, system, week, topic, primarySource: "Internal Medicine source map", mappingStatus: id === "rs-4-4" ? "missing" as const : "strong" as const })),
-  ...[...perioperativeAlignments, ...womenChildAlignments].map((item) => ({ id: item.id, subject: item.subject, system: item.system, week: item.week, topic: item.topic, primarySource: item.primary, mappingStatus: item.status })),
+  ...internalTopics.map(([id, system, week, topic]) => ({ id, subject: "Internal Medicine I" as const, system, week, topic, primarySource: internalObjectiveSources[id].primarySource, pageReference: internalObjectiveSources[id].pageReference, mappingStatus: id === "rs-4-4" ? "missing" as const : "strong" as const })),
+  ...[...perioperativeAlignments, ...womenChildAlignments].map((item) => ({ id: item.id, subject: item.subject, system: item.system, week: item.week, topic: item.topic, primarySource: item.primary, pageReference: item.pages, mappingStatus: item.status })),
 ];
 
 export const subjectAlignments = [...perioperativeAlignments, ...womenChildAlignments];
 
 export function findCoverageObjective(alignmentId: string) {
   return coverageObjectives.find((item) => item.id === alignmentId);
+}
+
+export function getObjectiveLessonLinks(alignmentId: string) {
+  return objectiveLessonLinks[alignmentId] ?? [];
 }

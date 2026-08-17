@@ -1,20 +1,27 @@
 import { and, asc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { recallReviews } from "@/db/schema";
+import { recallReviews, recallReviewSignals } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
+import { calculateAdaptiveReview } from "@/lib/adaptive-spacing";
 
 const ratings = new Set(["again", "hard", "good"]);
+const difficulties = new Set(["easy", "medium", "hard"]);
+const confidences = new Set(["low", "medium", "high"]);
 
 export async function GET(request: Request) {
   const ownerId = getCurrentOwnerId(request);
   if (!ownerId) return unauthorizedResponse();
   try {
     await ensureVitaeSchema();
-    const rows = await getDb().select().from(recallReviews)
-      .where(eq(recallReviews.ownerId, ownerId)).orderBy(asc(recallReviews.dueAt));
+    const [rows, signals] = await Promise.all([
+      getDb().select().from(recallReviews).where(eq(recallReviews.ownerId, ownerId)).orderBy(asc(recallReviews.dueAt)),
+      getDb().select().from(recallReviewSignals).where(eq(recallReviewSignals.ownerId, ownerId)),
+    ]);
+    const signalMap = new Map(signals.map((signal) => [`${signal.lessonSlug}:${signal.questionKey}`, signal]));
+    const enriched = rows.map((row) => ({ ...row, signal: signalMap.get(`${row.lessonSlug}:${row.questionKey}`) ?? null }));
     const now = new Date().toISOString();
-    return Response.json({ due: rows.filter((row) => row.dueAt <= now), upcoming: rows.filter((row) => row.dueAt > now), total: rows.length });
+    return Response.json({ due: enriched.filter((row) => row.dueAt <= now), upcoming: enriched.filter((row) => row.dueAt > now), total: rows.length });
   } catch {
     return Response.json({ error: "The review queue could not be loaded." }, { status: 500 });
   }
@@ -24,47 +31,44 @@ export async function POST(request: Request) {
   const ownerId = getCurrentOwnerId(request);
   if (!ownerId) return unauthorizedResponse();
   try {
-    const body = await request.json() as { lessonSlug?: string; questionKey?: string; question?: string; answer?: string; rating?: string };
+    const body = await request.json() as { lessonSlug?: string; questionKey?: string; question?: string; answer?: string; rating?: string; difficulty?: string; confidence?: string; responseMs?: number };
     const lessonSlug = body.lessonSlug?.trim().slice(0, 120) ?? "";
     const questionKey = body.questionKey?.trim().slice(0, 120) ?? "";
     const question = body.question?.trim().slice(0, 1000) ?? "";
     const answer = body.answer?.trim().slice(0, 2000) ?? "";
     const rating = body.rating?.trim() ?? "";
-    if (!lessonSlug || !questionKey || !question || !answer || !ratings.has(rating)) {
+    const difficulty = body.difficulty?.trim() || "medium";
+    const confidence = body.confidence?.trim() || "medium";
+    if (!lessonSlug || !questionKey || !question || !answer || !ratings.has(rating) || !difficulties.has(difficulty) || !confidences.has(confidence)) {
       return Response.json({ error: "A valid recall card and rating are required." }, { status: 400 });
     }
 
     await ensureVitaeSchema();
-    const [existing] = await getDb().select().from(recallReviews).where(and(
-      eq(recallReviews.ownerId, ownerId), eq(recallReviews.lessonSlug, lessonSlug), eq(recallReviews.questionKey, questionKey),
-    )).limit(1);
+    const [existing, signal] = await Promise.all([
+      getDb().select().from(recallReviews).where(and(eq(recallReviews.ownerId, ownerId), eq(recallReviews.lessonSlug, lessonSlug), eq(recallReviews.questionKey, questionKey))).limit(1).then((rows) => rows[0] ?? null),
+      getDb().select().from(recallReviewSignals).where(and(eq(recallReviewSignals.ownerId, ownerId), eq(recallReviewSignals.lessonSlug, lessonSlug), eq(recallReviewSignals.questionKey, questionKey))).limit(1).then((rows) => rows[0] ?? null),
+    ]);
     const now = new Date();
-    let repetitions = existing?.repetitions ?? 0;
-    let intervalDays = existing?.intervalDays ?? 1;
-    let easeScore = existing?.easeScore ?? 250;
-    let dueAt: Date;
-
-    if (rating === "again") {
-      repetitions = 0; intervalDays = 0; easeScore = Math.max(130, easeScore - 20);
-      dueAt = new Date(now.getTime() + 10 * 60 * 1000);
-    } else if (rating === "hard") {
-      repetitions += 1; intervalDays = Math.max(1, Math.round(intervalDays * 1.2)); easeScore = Math.max(130, easeScore - 15);
-      dueAt = new Date(now.getTime() + intervalDays * 24 * 60 * 60 * 1000);
-    } else {
-      repetitions += 1;
-      intervalDays = repetitions === 1 ? 1 : repetitions === 2 ? 3 : Math.max(4, Math.round(intervalDays * easeScore / 100));
-      easeScore = Math.min(300, easeScore + 5);
-      dueAt = new Date(now.getTime() + intervalDays * 24 * 60 * 60 * 1000);
-    }
+    const schedule = calculateAdaptiveReview({
+      existing,
+      signal,
+      rating: rating as "again" | "hard" | "good",
+      difficulty: difficulty as "easy" | "medium" | "hard",
+      confidence: confidence as "low" | "medium" | "high",
+      responseMs: body.responseMs,
+      now,
+    });
 
     const updatedAt = now.toISOString();
-    const values = { question, answer, lastRating: rating, repetitions, intervalDays, easeScore, dueAt: dueAt.toISOString(), lastReviewedAt: updatedAt, updatedAt };
+    const values = { question, answer, lastRating: rating, repetitions: schedule.repetitions, intervalDays: schedule.intervalDays, easeScore: schedule.easeScore, dueAt: schedule.dueAt, lastReviewedAt: updatedAt, updatedAt };
     const [saved] = await getDb().insert(recallReviews).values({
       id: crypto.randomUUID(), ownerId, lessonSlug, questionKey, ...values,
     }).onConflictDoUpdate({
       target: [recallReviews.ownerId, recallReviews.lessonSlug, recallReviews.questionKey], set: values,
     }).returning();
-    return Response.json({ review: saved });
+    const signalValues = { difficulty, confidence, wasCorrect: schedule.correct ? 1 : 0, lapseCount: schedule.lapseCount, reviewCount: schedule.reviewCount, accuracyStreak: schedule.accuracyStreak, averageResponseMs: schedule.averageResponseMs, forgettingScore: schedule.forgettingScore, nextIntervalDays: schedule.nextIntervalDays, updatedAt };
+    const [savedSignal] = await getDb().insert(recallReviewSignals).values({ id: crypto.randomUUID(), ownerId, lessonSlug, questionKey, ...signalValues }).onConflictDoUpdate({ target: [recallReviewSignals.ownerId, recallReviewSignals.lessonSlug, recallReviewSignals.questionKey], set: signalValues }).returning();
+    return Response.json({ review: saved, signal: savedSignal, rationale: schedule.rationale });
   } catch {
     return Response.json({ error: "The recall review could not be scheduled." }, { status: 500 });
   }

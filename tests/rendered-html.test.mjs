@@ -79,8 +79,8 @@ test("renders the connected curriculum, adaptive engine, application tools, trav
   assert.match(learnHtml, /28 source-mapped objectives/);
   assert.match(learnHtml, /Measure, learn, apply, correct/);
   assert.match(learnHtml, /Adaptive next step/);
-  assert.match(coverageHtml, /Syllabus mastery dashboard/);
-  assert.match(coverageHtml, /See what is mapped/);
+  assert.match(coverageHtml, /Objective-level coverage/);
+  assert.match(coverageHtml, /complete path/);
   assert.match(coverageHtml, /Internal Medicine I/);
   assert.match(coverageHtml, /Perioperative Medicine I/);
   assert.match(coverageHtml, /Women &amp; Child Health I/);
@@ -108,7 +108,7 @@ test("renders the connected curriculum, adaptive engine, application tools, trav
   assert.match(outputHtml, /CO = HR × SV/);
   assert.match(outputHtml, /From one beat to flow per minute/);
   assert.match(outputHtml, /Professor explanation/);
-  assert.match(reviewHtml, /Smart recall queue/);
+  assert.match(reviewHtml, /Adaptive memory/);
   assert.match(reviewHtml, /Review what your memory/);
   assert.match(libraryHtml, /Upload sources/);
   assert.match(libraryHtml, /Book section/);
@@ -193,7 +193,7 @@ test("declares durable learning, adaptive application, correction, map, review, 
   assert.match(lessonDraftRouteText, /source_required/);
   assert.match(lessonDraftRouteText, /Draft outline only/);
   assert.match(reviewRouteText, /again/);
-  assert.match(reviewRouteText, /10 \* 60 \* 1000/);
+  assert.match(reviewRouteText, /calculateAdaptiveReview/);
   assert.match(coverageRouteText, /coverageObjectives/);
   assert.match(assessmentRouteText, /assessmentAttempts/);
   assert.match(assessmentRouteText, /mistakeNotebook/);
@@ -266,7 +266,7 @@ test("renders approved-source search, recoverable history, and private backup", 
   const [toolsHtml, searchHtml, historyHtml, backupHtml] = await Promise.all([
     toolsResponse.text(), searchResponse.text(), historyResponse.text(), backupResponse.text(),
   ]);
-  assert.match(toolsHtml, /Your sources and work/);
+  assert.match(toolsHtml, /Your sources now drive/);
   assert.match(toolsHtml, /Smart source search/);
   assert.match(searchHtml, /Search the approved shelf/);
   assert.match(searchHtml, /approved syllabus mapping/);
@@ -297,7 +297,7 @@ test("renders approved-source search, recoverable history, and private backup", 
   assert.match(backupApi, /delete safe\.objectKey/);
   assert.match(backupApi, /content-disposition/);
   assert.match(masteryCalculation, /assessmentComponent/);
-  assert.match(serviceWorker, /poh-tah-toh-travel-v5/);
+  assert.match(serviceWorker, /poh-tah-toh-travel-v6/);
   assert.match(serviceWorker, /source-search/);
 });
 
@@ -351,6 +351,65 @@ test("renders deep source extraction, linked reading, and citation-first Profess
   assert.match(evidenceApi, /gate: evidence\.length \? "supported"/);
   assert.match(backupApi, /sourceCitations/);
   assert.doesNotMatch(backupApi, /documentTextChunks/);
+});
+
+test("renders objective evidence, a daily queue, adaptive spacing, and reviewed source questions", async () => {
+  const [toolsResponse, coverageResponse, todayResponse, reviewResponse, questionsResponse] = await Promise.all([
+    render("/study-tools"),
+    render("/coverage"),
+    render("/today"),
+    render("/review"),
+    render("/question-studio"),
+  ]);
+  for (const response of [toolsResponse, coverageResponse, todayResponse, reviewResponse, questionsResponse]) assert.equal(response.status, 200);
+  const [toolsHtml, coverageHtml, todayHtml, reviewHtml, questionsHtml] = await Promise.all([
+    toolsResponse.text(), coverageResponse.text(), todayResponse.text(), reviewResponse.text(), questionsResponse.text(),
+  ]);
+  assert.match(toolsHtml, /Objective-level coverage/);
+  assert.match(toolsHtml, /Adaptive daily queue/);
+  assert.match(toolsHtml, /Smarter spaced repetition/);
+  assert.match(toolsHtml, /Approved-source questions/);
+  assert.match(coverageHtml, /chapter, exact page state/);
+  assert.match(coverageHtml, /remaining gaps/);
+  assert.match(todayHtml, /highest-value/);
+  assert.match(todayHtml, /Ordered by learning value/);
+  assert.match(reviewHtml, /accuracy, difficulty, confidence/);
+  assert.match(questionsHtml, /exact passage/);
+  assert.match(questionsHtml, /Human review gate/);
+
+  const [migration, schema, runtimeSchema, coverageApi, dailyApi, reviewApi, spacing, questionApi, backupApi, serviceWorker] = await Promise.all([
+    readFile(new URL("../drizzle/0007_ambiguous_chimera.sql", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/runtime-schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/coverage/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/daily-queue/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/reviews/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/adaptive-spacing.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/generated-questions/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/backup/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(migration, /CREATE TABLE `daily_queue_actions`/);
+  assert.match(migration, /CREATE TABLE `recall_review_signals`/);
+  assert.match(migration, /CREATE TABLE `generated_questions`/);
+  assert.match(schema, /dailyQueueActions|recallReviewSignals|generatedQuestions/);
+  assert.match(runtimeSchema, /CREATE TABLE IF NOT EXISTS generated_questions/);
+  assert.match(coverageApi, /questionSummary/);
+  assert.match(coverageApi, /Confirm an exact page/);
+  assert.match(dailyApi, /forgettingScore/);
+  assert.match(dailyApi, /priority/);
+  assert.match(dailyApi, /dailyQueueActions/);
+  assert.match(reviewApi, /calculateAdaptiveReview/);
+  assert.match(spacing, /confidence|difficulty|lapseCount|forgettingScore/);
+  assert.match(questionApi, /review\?\.decision !== "approved"/);
+  assert.match(questionApi, /status: "pending_review"/);
+  assert.match(questionApi, /normalize\(chunk\.textContent\)\.includes/);
+  assert.match(questionApi, /clinical_case/);
+  assert.match(backupApi, /recallReviewSignals/);
+  assert.match(backupApi, /dailyQueueActions/);
+  assert.match(backupApi, /generatedQuestions/);
+  assert.match(serviceWorker, /question-studio/);
+  assert.match(serviceWorker, /\/today/);
 });
 
 test("removes the disposable starter and includes production brand metadata", async () => {

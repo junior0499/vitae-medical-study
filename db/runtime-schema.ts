@@ -173,6 +173,60 @@ export function ensureVitaeSchema() {
       ON recall_reviews(owner_id, lesson_slug, question_key)`),
     database.prepare(`CREATE INDEX IF NOT EXISTS idx_recall_reviews_owner_due
       ON recall_reviews(owner_id, due_at)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS recall_review_signals (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      lesson_slug TEXT NOT NULL,
+      question_key TEXT NOT NULL,
+      difficulty TEXT DEFAULT 'medium' NOT NULL,
+      confidence TEXT DEFAULT 'medium' NOT NULL,
+      was_correct INTEGER DEFAULT 1 NOT NULL,
+      lapse_count INTEGER DEFAULT 0 NOT NULL,
+      review_count INTEGER DEFAULT 0 NOT NULL,
+      accuracy_streak INTEGER DEFAULT 0 NOT NULL,
+      average_response_ms INTEGER DEFAULT 0 NOT NULL,
+      forgetting_score INTEGER DEFAULT 0 NOT NULL,
+      next_interval_days INTEGER DEFAULT 1 NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_recall_signals_owner_question
+      ON recall_review_signals(owner_id, lesson_slug, question_key)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_recall_signals_owner_forgetting
+      ON recall_review_signals(owner_id, forgetting_score)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS daily_queue_actions (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      date_key TEXT NOT NULL,
+      task_key TEXT NOT NULL,
+      status TEXT DEFAULT 'pending' NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_queue_owner_date_task
+      ON daily_queue_actions(owner_id, date_key, task_key)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_queue_owner_date
+      ON daily_queue_actions(owner_id, date_key)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS generated_questions (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      objective_id TEXT NOT NULL,
+      document_id TEXT NOT NULL,
+      page_number INTEGER NOT NULL,
+      printed_page TEXT DEFAULT '' NOT NULL,
+      question_type TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      options_json TEXT DEFAULT '[]' NOT NULL,
+      answer TEXT NOT NULL,
+      explanation TEXT DEFAULT '' NOT NULL,
+      source_quote TEXT NOT NULL,
+      status TEXT DEFAULT 'pending_review' NOT NULL,
+      reviewer_note TEXT DEFAULT '' NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_generated_questions_owner_objective_status
+      ON generated_questions(owner_id, objective_id, status)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_generated_questions_owner_status_updated
+      ON generated_questions(owner_id, status, updated_at)`),
     database.prepare(`CREATE TABLE IF NOT EXISTS assessment_attempts (
       id TEXT PRIMARY KEY NOT NULL,
       owner_id TEXT NOT NULL,

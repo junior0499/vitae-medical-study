@@ -96,6 +96,7 @@ export default function Home() {
 
         <nav className="side-nav">
           <a className="active" href="/"><span aria-hidden="true">⌂</span>Overview</a>
+          <a href="/today"><span aria-hidden="true">◷</span>Today</a>
           <a href="/learn"><span aria-hidden="true">◎</span>Learn</a>
           <a href="/alignment"><span aria-hidden="true">⌁</span>Source map</a>
           <a href="/learn/cardiovascular/cardiac-cycle#recall"><span aria-hidden="true">↻</span>Recall<b>18</b></a>
@@ -193,7 +194,7 @@ export default function Home() {
                   </label>
                 ))}
               </div>
-              <footer><span>About 1 hr 5 min remaining</span><a href="/learn">Adjust plan</a></footer>
+              <footer><span>About 1 hr 5 min remaining</span><a href="/today">Open adaptive queue</a></footer>
             </article>
 
             <article id="schedule" className="panel schedule-panel">

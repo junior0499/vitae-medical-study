@@ -165,6 +165,60 @@ export const recallReviews = sqliteTable("recall_reviews", {
   index("idx_recall_reviews_owner_due").on(table.ownerId, table.dueAt),
 ]);
 
+export const recallReviewSignals = sqliteTable("recall_review_signals", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  lessonSlug: text("lesson_slug").notNull(),
+  questionKey: text("question_key").notNull(),
+  difficulty: text("difficulty").notNull().default("medium"),
+  confidence: text("confidence").notNull().default("medium"),
+  wasCorrect: integer("was_correct").notNull().default(1),
+  lapseCount: integer("lapse_count").notNull().default(0),
+  reviewCount: integer("review_count").notNull().default(0),
+  accuracyStreak: integer("accuracy_streak").notNull().default(0),
+  averageResponseMs: integer("average_response_ms").notNull().default(0),
+  forgettingScore: integer("forgetting_score").notNull().default(0),
+  nextIntervalDays: integer("next_interval_days").notNull().default(1),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_recall_signals_owner_question").on(table.ownerId, table.lessonSlug, table.questionKey),
+  index("idx_recall_signals_owner_forgetting").on(table.ownerId, table.forgettingScore),
+]);
+
+export const dailyQueueActions = sqliteTable("daily_queue_actions", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  dateKey: text("date_key").notNull(),
+  taskKey: text("task_key").notNull(),
+  status: text("status").notNull().default("pending"),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_daily_queue_owner_date_task").on(table.ownerId, table.dateKey, table.taskKey),
+  index("idx_daily_queue_owner_date").on(table.ownerId, table.dateKey),
+]);
+
+export const generatedQuestions = sqliteTable("generated_questions", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  objectiveId: text("objective_id").notNull(),
+  documentId: text("document_id").notNull(),
+  pageNumber: integer("page_number").notNull(),
+  printedPage: text("printed_page").notNull().default(""),
+  questionType: text("question_type").notNull(),
+  prompt: text("prompt").notNull(),
+  optionsJson: text("options_json").notNull().default("[]"),
+  answer: text("answer").notNull(),
+  explanation: text("explanation").notNull().default(""),
+  sourceQuote: text("source_quote").notNull(),
+  status: text("status").notNull().default("pending_review"),
+  reviewerNote: text("reviewer_note").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  index("idx_generated_questions_owner_objective_status").on(table.ownerId, table.objectiveId, table.status),
+  index("idx_generated_questions_owner_status_updated").on(table.ownerId, table.status, table.updatedAt),
+]);
+
 export const assessmentAttempts = sqliteTable("assessment_attempts", {
   id: text("id").primaryKey(),
   ownerId: text("owner_id").notNull(),

@@ -3,7 +3,7 @@
 import { MasteryMeter } from "@/components/mastery-meter";
 
 type VitaeFrameProps = {
-  active: "overview" | "learn" | "path" | "practice" | "coverage" | "review" | "alignment" | "library" | "assessment" | "mistakes" | "archive";
+  active: "overview" | "today" | "learn" | "path" | "practice" | "coverage" | "review" | "alignment" | "library" | "assessment" | "mistakes" | "archive";
   title: string;
   subtitle: string;
   children: React.ReactNode;
@@ -11,6 +11,7 @@ type VitaeFrameProps = {
 
 const navItems: Array<{ id: string; href: string; icon: string; label: string; badge?: string }> = [
   { id: "overview", href: "/", icon: "⌂", label: "Overview" },
+  { id: "today", href: "/today", icon: "◷", label: "Today" },
   { id: "learn", href: "/learn", icon: "◎", label: "Learn" },
   { id: "path", href: "/learning-graph", icon: "⌘", label: "Study path" },
   { id: "practice", href: "/practice", icon: "✦", label: "Practice" },

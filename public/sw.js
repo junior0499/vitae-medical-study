@@ -1,5 +1,5 @@
-const CACHE_NAME = "poh-tah-toh-travel-v5";
-const APP_SHELL = ["/", "/learn", "/routes", "/learning-graph", "/diagnostic", "/cases", "/visual-lab", "/practice", "/viva", "/comparisons", "/interleaved", "/confidence", "/exam-blueprint", "/assessment", "/review", "/mistakes", "/maps", "/offline", "/study-tools", "/source-search", "/history", "/backup"];
+const CACHE_NAME = "poh-tah-toh-travel-v6";
+const APP_SHELL = ["/", "/learn", "/today", "/routes", "/learning-graph", "/diagnostic", "/cases", "/visual-lab", "/practice", "/question-studio", "/viva", "/comparisons", "/interleaved", "/confidence", "/exam-blueprint", "/assessment", "/review", "/mistakes", "/maps", "/offline", "/study-tools", "/source-search", "/history", "/backup"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => Promise.allSettled(APP_SHELL.map((url) => cache.add(url)))).then(() => self.skipWaiting()));

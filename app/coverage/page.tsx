@@ -4,7 +4,7 @@ import { CoverageWorkspace } from "./coverage-workspace";
 
 export const metadata: Metadata = {
   title: "Syllabus Coverage · Poh-tah-toh",
-  description: "Track every Semester 7 clinical objective from source mapping to lesson and review.",
+  description: "Track every Semester 7 objective through chapter, page, uploaded source, lesson, recall, questions, and remaining gaps.",
 };
 
 export default function CoveragePage() {
