@@ -53,6 +53,52 @@ export const documentSourceDetails = sqliteTable("document_source_details", {
   uniqueIndex("idx_document_source_details_owner_document").on(table.ownerId, table.documentId),
 ]);
 
+export const documentExtractions = sqliteTable("document_extractions", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  documentId: text("document_id").notNull(),
+  status: text("status").notNull().default("pending"),
+  method: text("method").notNull().default(""),
+  pageCount: integer("page_count").notNull().default(0),
+  searchablePages: integer("searchable_pages").notNull().default(0),
+  characterCount: integer("character_count").notNull().default(0),
+  warning: text("warning").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_document_extractions_owner_document").on(table.ownerId, table.documentId),
+  index("idx_document_extractions_owner_status").on(table.ownerId, table.status),
+]);
+
+export const documentTextChunks = sqliteTable("document_text_chunks", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  documentId: text("document_id").notNull(),
+  pageNumber: integer("page_number").notNull(),
+  printedPage: text("printed_page").notNull().default(""),
+  textContent: text("text_content").notNull(),
+  method: text("method").notNull(),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_document_text_owner_document_page").on(table.ownerId, table.documentId, table.pageNumber),
+]);
+
+export const sourceCitations = sqliteTable("source_citations", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  documentId: text("document_id").notNull(),
+  lessonSlug: text("lesson_slug").notNull(),
+  pageNumber: integer("page_number").notNull(),
+  printedPage: text("printed_page").notNull().default(""),
+  quote: text("quote").notNull(),
+  noteText: text("note_text").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  index("idx_source_citations_owner_lesson_created").on(table.ownerId, table.lessonSlug, table.createdAt),
+  index("idx_source_citations_owner_document_page").on(table.ownerId, table.documentId, table.pageNumber),
+]);
+
 export const alignmentReviews = sqliteTable("alignment_reviews", {
   id: text("id").primaryKey(),
   ownerId: text("owner_id").notNull(),

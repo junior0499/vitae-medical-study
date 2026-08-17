@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { alignmentReviews, assessmentAttempts, documentSourceDetails, importedAlignments, learningActivityAttempts, learningVersions, lessonDrafts, lessonNotes, lessonProgress, mistakeNotebook, noteMindMaps, recallReviews, studyDocuments } from "@/db/schema";
+import { alignmentReviews, assessmentAttempts, documentExtractions, documentSourceDetails, importedAlignments, learningActivityAttempts, learningVersions, lessonDrafts, lessonNotes, lessonProgress, mistakeNotebook, noteMindMaps, recallReviews, sourceCitations, studyDocuments } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 import { calculateMastery } from "@/lib/mastery-calculation";
@@ -19,11 +19,13 @@ export async function GET(request: Request) {
   if (!ownerId) return unauthorizedResponse();
   try {
     await ensureVitaeSchema();
-    const [progress, notes, documents, sourceDetails, reviews, imported, drafts, recall, assessments, mistakes, maps, activities, versions] = await Promise.all([
+    const [progress, notes, documents, sourceDetails, extractions, citations, reviews, imported, drafts, recall, assessments, mistakes, maps, activities, versions] = await Promise.all([
       getDb().select().from(lessonProgress).where(eq(lessonProgress.ownerId, ownerId)),
       getDb().select().from(lessonNotes).where(eq(lessonNotes.ownerId, ownerId)),
       getDb().select().from(studyDocuments).where(eq(studyDocuments.ownerId, ownerId)),
       getDb().select().from(documentSourceDetails).where(eq(documentSourceDetails.ownerId, ownerId)),
+      getDb().select().from(documentExtractions).where(eq(documentExtractions.ownerId, ownerId)),
+      getDb().select().from(sourceCitations).where(eq(sourceCitations.ownerId, ownerId)),
       getDb().select().from(alignmentReviews).where(eq(alignmentReviews.ownerId, ownerId)),
       getDb().select().from(importedAlignments).where(eq(importedAlignments.ownerId, ownerId)),
       getDb().select().from(lessonDrafts).where(eq(lessonDrafts.ownerId, ownerId)),
@@ -39,6 +41,7 @@ export async function GET(request: Request) {
       lessons: progress.length,
       notes: notes.length,
       sourceFiles: documents.length,
+      sourceCitations: citations.length,
       sourceMappings: reviews.length + imported.length,
       lessonDrafts: drafts.length,
       recallCards: recall.length,
@@ -66,6 +69,8 @@ export async function GET(request: Request) {
         lessonNotes: sanitizeRows(notes),
         studyDocuments: sanitizeRows(documents),
         documentSourceDetails: sanitizeRows(sourceDetails),
+        documentExtractions: sanitizeRows(extractions),
+        sourceCitations: sanitizeRows(citations),
         alignmentReviews: sanitizeRows(reviews),
         importedAlignments: sanitizeRows(imported),
         lessonDrafts: sanitizeRows(drafts),

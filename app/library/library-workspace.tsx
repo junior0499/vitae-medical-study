@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { extractSourceFile, type SourceExtractionResult } from "@/lib/source-extraction-client";
 
 type StudyDocument = {
   id: string;
@@ -13,8 +14,9 @@ type StudyDocument = {
   status: string;
   createdAt: string;
   sourceDetails: { bookTitle: string; bookEdition: string; sectionLabel: string; pageRange: string } | null;
+  extraction: { status: string; method: string; pageCount: number; searchablePages: number; characterCount: number; warning: string } | null;
 };
-type FileUploadState = "waiting" | "uploading" | "ready" | "error";
+type FileUploadState = "waiting" | "uploading" | "extracting" | "indexing" | "ready" | "partial" | "needs_ocr" | "error";
 
 const subjects = ["Internal Medicine", "Perioperative Medicine", "Women & Child Health", "Foundations", "Other"];
 
@@ -37,6 +39,8 @@ export function LibraryWorkspace() {
   const [state, setState] = useState<"idle" | "uploading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [fileStates, setFileStates] = useState<Record<string, FileUploadState>>({});
+  const [fileProgress, setFileProgress] = useState<Record<string, string>>({});
+  const [indexStates, setIndexStates] = useState<Record<string, string>>({});
 
   const fileKey = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
 
@@ -64,6 +68,16 @@ export function LibraryWorkspace() {
     setMessage("");
   }
 
+  async function saveExtraction(documentId: string, extraction: SourceExtractionResult) {
+    const response = await fetch("/api/document-extractions", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ documentId, ...extraction }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error ?? "The source index could not be saved.");
+    return data.extraction as StudyDocument["extraction"];
+  }
+
   async function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!files.length) {
@@ -84,20 +98,53 @@ export function LibraryWorkspace() {
         const response = await fetch("/api/documents", { method: "POST", body: form });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error ?? "Upload failed");
-        setFileStates((current) => ({ ...current, [key]: "ready" }));
-        return { file, ok: true, error: "" };
+        const document = data.documents?.[0] as StudyDocument | undefined;
+        let extractionStatus = "uploaded";
+        let extractionWarning = "";
+        if (category === "Book section" && document) {
+          try {
+            setFileStates((current) => ({ ...current, [key]: "extracting" }));
+            const extraction = await extractSourceFile(file, (progress) => setFileProgress((current) => ({ ...current, [key]: progress })));
+            setFileStates((current) => ({ ...current, [key]: "indexing" }));
+            const saved = await saveExtraction(document.id, extraction);
+            extractionStatus = saved?.status ?? extraction.status;
+            setFileStates((current) => ({ ...current, [key]: extractionStatus === "ready" ? "ready" : extractionStatus === "partial" ? "partial" : "needs_ocr" }));
+          } catch (error) {
+            extractionWarning = error instanceof Error ? error.message : "The deep index needs attention.";
+            setFileStates((current) => ({ ...current, [key]: "needs_ocr" }));
+            setFileProgress((current) => ({ ...current, [key]: "Original saved · retry the deep index from Your sources" }));
+          }
+        } else setFileStates((current) => ({ ...current, [key]: "ready" }));
+        return { file, ok: true, error: "", warning: extractionWarning, indexed: extractionStatus === "ready" || extractionStatus === "partial" };
       } catch (error) {
         setFileStates((current) => ({ ...current, [key]: "error" }));
-        return { file, ok: false, error: error instanceof Error ? error.message : "Upload failed" };
+        return { file, ok: false, error: error instanceof Error ? error.message : "Upload failed", warning: "", indexed: false };
       }
     }));
     const successful = results.filter((result) => result.ok).length;
     const failed = results.filter((result) => !result.ok);
     setState(failed.length ? "error" : "success");
-    setMessage(failed.length ? `${successful} added; ${failed.length} kept here to retry. ${failed[0].error}` : `${successful} ${successful === 1 ? "source" : "sources"} added independently to Semester ${semester}.`);
+    const indexed = results.filter((result) => result.ok && result.indexed).length;
+    const indexWarnings = results.filter((result) => result.ok && result.warning).length;
+    setMessage(failed.length ? `${successful} added; ${failed.length} kept here to retry. ${failed[0].error}` : `${successful} ${successful === 1 ? "source" : "sources"} added independently${indexed ? ` · ${indexed} deep-search ${indexed === 1 ? "index" : "indexes"} ready` : ""}${indexWarnings ? ` · ${indexWarnings} original ${indexWarnings === 1 ? "is" : "are"} safe and can be indexed from Your sources` : ""}.`);
     setFiles(failed.map((result) => result.file));
     if (!failed.length && inputRef.current) inputRef.current.value = "";
     await loadDocuments();
+  }
+
+  async function indexDocument(document: StudyDocument) {
+    setIndexStates((current) => ({ ...current, [document.id]: "Opening the private source…" }));
+    try {
+      const response = await fetch(`/api/documents/${document.id}`);
+      if (!response.ok) throw new Error("The original source could not be opened.");
+      const blob = await response.blob();
+      const file = new File([blob], document.filename, { type: document.contentType });
+      const extraction = await extractSourceFile(file, (progress) => setIndexStates((current) => ({ ...current, [document.id]: progress })));
+      setIndexStates((current) => ({ ...current, [document.id]: "Saving the private search index…" }));
+      const saved = await saveExtraction(document.id, extraction);
+      setIndexStates((current) => ({ ...current, [document.id]: saved?.status === "ready" ? "Deep index ready" : saved?.status === "partial" ? "Partial index saved" : "OCR still needed" }));
+      await loadDocuments();
+    } catch (error) { setIndexStates((current) => ({ ...current, [document.id]: error instanceof Error ? error.message : "Indexing failed." })); }
   }
 
   const grouped = useMemo(() => {
@@ -131,7 +178,7 @@ export function LibraryWorkspace() {
             <input ref={inputRef} type="file" multiple accept=".pdf,.doc,.docx,.csv,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/csv,text/plain" onChange={(event) => acceptFiles(event.target.files)} />
             <span aria-hidden="true">⇧</span><strong>Drop your learning sources here</strong><p>syllabus, alignment, contents, or selected book sections</p><small>PDF, Word, CSV, or text · up to 5 files · 25 MB each</small>
           </label>
-          {files.length ? <div className="selected-files">{files.map((file) => { const uploadState = fileStates[fileKey(file)] ?? "waiting"; return <div key={fileKey(file)}><span>{file.type === "application/pdf" ? "PDF" : "DOC"}</span><p><strong>{file.name}</strong><small>{formatBytes(file.size)} · {uploadState === "uploading" ? "uploading…" : uploadState === "ready" ? "ready" : uploadState === "error" ? "retry needed" : "waiting"}</small></p><button type="button" disabled={uploadState === "uploading"} onClick={() => setFiles((current) => current.filter((item) => item !== file))} aria-label={`Remove ${file.name}`}>×</button></div>; })}</div> : null}
+          {files.length ? <div className="selected-files">{files.map((file) => { const key = fileKey(file); const uploadState = fileStates[key] ?? "waiting"; const statusLabel = uploadState === "uploading" ? "uploading…" : uploadState === "extracting" ? fileProgress[key] || "extracting text…" : uploadState === "indexing" ? "saving search index…" : uploadState === "ready" ? "searchable" : uploadState === "partial" ? "partial index ready" : uploadState === "needs_ocr" ? "uploaded · OCR needs attention" : uploadState === "error" ? "retry needed" : "waiting"; return <div key={key}><span>{file.type === "application/pdf" ? "PDF" : "DOC"}</span><p><strong>{file.name}</strong><small>{formatBytes(file.size)} · {statusLabel}</small></p><button type="button" disabled={["uploading", "extracting", "indexing"].includes(uploadState)} onClick={() => setFiles((current) => current.filter((item) => item !== file))} aria-label={`Remove ${file.name}`}>×</button></div>; })}</div> : null}
           {message ? <p className={`upload-message upload-message--${state}`} role="status">{message}</p> : null}
           <button className="upload-submit" type="submit" disabled={state === "uploading"}>{state === "uploading" ? "Adding sources…" : `Add ${files.length || ""} ${files.length === 1 ? "source" : "sources"}`}<span>→</span></button>
         </form>
@@ -139,14 +186,14 @@ export function LibraryWorkspace() {
         <aside className="source-flow-card">
           <span className="eyebrow">How Poh-tah-toh uses sources</span><h2>Your material stays traceable.</h2>
           <ol><li><span>1</span><div><strong>Upload the syllabus</strong><p>Keep the official learning requirements.</p></div></li><li><span>2</span><div><strong>Add the alignment & contents</strong><p>Preserve the approved chapter plan.</p></div></li><li><span>3</span><div><strong>Add selected book sections</strong><p>Attach title, edition, chapter and pages.</p></div></li></ol>
-          <div><span aria-hidden="true">⌁</span><p><strong>Independent fast path</strong>Each book section uploads and processes on its own. A difficult file cannot hold up the rest, and failed sections stay selected for a simple retry.</p></div>
+          <div><span aria-hidden="true">⌁</span><p><strong>Private deep index</strong>PDF text, Word text, and small scanned sections are processed on this device. OCR runs only when a PDF page has no usable text layer. Independent fast path: every original remains safe if indexing needs a retry.</p></div>
           <a className="source-map-link" href="/alignment">Review the chapter map <span>→</span></a>
         </aside>
       </section>
 
       <section className="document-library" aria-labelledby="saved-sources-title">
         <header className="section-header"><div><span className="eyebrow">Saved by semester</span><h2 id="saved-sources-title">Your sources</h2></div><span>{documents.length ? "Open any original source" : "Your uploaded sources will appear here"}</span></header>
-        {grouped.length ? grouped.map(([groupSemester, items]) => <div className="semester-group" key={groupSemester}><header><strong>Semester {groupSemester}</strong><span>{items.length} {items.length === 1 ? "source" : "sources"}</span></header><div>{items.map((document) => <article key={document.id}><span className={`document-type ${document.contentType === "application/pdf" ? "document-type--pdf" : ""}`}>{document.contentType === "application/pdf" ? "PDF" : document.contentType.includes("csv") || document.contentType === "text/plain" ? "TXT" : "DOC"}</span><div><strong>{document.filename}</strong><p>{document.subject} · {document.category} · {formatBytes(document.sizeBytes)}</p>{document.sourceDetails ? <small className="document-book-detail">{document.sourceDetails.bookTitle}{document.sourceDetails.bookEdition ? ` · ${document.sourceDetails.bookEdition}` : ""} · {document.sourceDetails.sectionLabel}{document.sourceDetails.pageRange ? ` · pp. ${document.sourceDetails.pageRange}` : ""}</small> : null}</div><span>{new Date(document.createdAt).toLocaleDateString("en", { day: "numeric", month: "short" })}</span><a href={`/api/documents/${document.id}`} target="_blank" rel="noreferrer">Open ↗</a></article>)}</div></div>) : <div className="empty-library"><span>▤</span><h3>Your library is ready.</h3><p>Add the first syllabus or textbook above. It will be saved privately and organized by semester.</p></div>}
+        {grouped.length ? grouped.map(([groupSemester, items]) => <div className="semester-group" key={groupSemester}><header><strong>Semester {groupSemester}</strong><span>{items.length} {items.length === 1 ? "source" : "sources"}</span></header><div>{items.map((document) => <article key={document.id}><span className={`document-type ${document.contentType === "application/pdf" ? "document-type--pdf" : ""}`}>{document.contentType === "application/pdf" ? "PDF" : document.contentType.includes("csv") || document.contentType === "text/plain" ? "TXT" : "DOC"}</span><div><strong>{document.filename}</strong><p>{document.subject} · {document.category} · {formatBytes(document.sizeBytes)}</p>{document.sourceDetails ? <small className="document-book-detail">{document.sourceDetails.bookTitle}{document.sourceDetails.bookEdition ? ` · ${document.sourceDetails.bookEdition}` : ""} · {document.sourceDetails.sectionLabel}{document.sourceDetails.pageRange ? ` · pp. ${document.sourceDetails.pageRange}` : ""}</small> : null}<small className={`document-index-status document-index-status--${document.extraction?.status ?? "missing"}`}>{indexStates[document.id] || (document.extraction ? `${document.extraction.searchablePages}/${document.extraction.pageCount || document.extraction.searchablePages} pages searchable${document.extraction.method.includes("ocr") ? " · OCR used" : ""}` : "Deep index not built")}</small></div><div className="document-actions"><a href={`/api/documents/${document.id}`} target="_blank" rel="noreferrer">Original ↗</a>{document.extraction?.searchablePages ? <a href={`/reader/${document.id}`}>Read text →</a> : null}{document.category === "Book section" ? <button type="button" onClick={() => indexDocument(document)} disabled={Boolean(indexStates[document.id]?.endsWith("…"))}>{document.extraction ? "Rebuild index" : "Build deep index"}</button> : null}</div></article>)}</div></div>) : <div className="empty-library"><span>▤</span><h3>Your library is ready.</h3><p>Add the first syllabus or textbook above. It will be saved privately and organized by semester.</p></div>}
       </section>
     </div>
   );

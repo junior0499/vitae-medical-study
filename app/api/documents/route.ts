@@ -1,7 +1,7 @@
 import { desc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { ensureVitaeSchema, getStudyBucket } from "@/db/runtime-schema";
-import { documentSourceDetails, studyDocuments } from "@/db/schema";
+import { documentExtractions, documentSourceDetails, studyDocuments } from "@/db/schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
@@ -35,11 +35,13 @@ export async function GET(request: Request) {
       createdAt: studyDocuments.createdAt,
     }).from(studyDocuments).where(eq(studyDocuments.ownerId, ownerId))
       .orderBy(desc(studyDocuments.createdAt));
-    const details = rows.length ? await getDb().select().from(documentSourceDetails).where(
-      inArray(documentSourceDetails.documentId, rows.map((row) => row.id)),
-    ) : [];
+    const [details, extractions] = rows.length ? await Promise.all([
+      getDb().select().from(documentSourceDetails).where(inArray(documentSourceDetails.documentId, rows.map((row) => row.id))),
+      getDb().select().from(documentExtractions).where(inArray(documentExtractions.documentId, rows.map((row) => row.id))),
+    ]) : [[], []];
     const byDocument = new Map(details.map((detail) => [detail.documentId, detail]));
-    return Response.json({ documents: rows.map((row) => ({ ...row, sourceDetails: byDocument.get(row.id) ?? null })) });
+    const extractionByDocument = new Map(extractions.map((extraction) => [extraction.documentId, extraction]));
+    return Response.json({ documents: rows.map((row) => ({ ...row, sourceDetails: byDocument.get(row.id) ?? null, extraction: extractionByDocument.get(row.id) ?? null })) });
   } catch {
     return Response.json({ error: "Your library could not be loaded." }, { status: 500 });
   }
@@ -118,6 +120,7 @@ export async function POST(request: Request) {
       status: document.status,
       createdAt: document.createdAt,
       sourceDetails: category === "Book section" ? { bookTitle, bookEdition, sectionLabel, pageRange } : null,
+      extraction: null,
     })) }, { status: 201 });
   } catch {
     return Response.json({ error: "The files could not be uploaded. Please try again." }, { status: 500 });

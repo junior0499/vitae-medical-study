@@ -63,6 +63,51 @@ export function ensureVitaeSchema() {
     )`),
     database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_document_source_details_owner_document
       ON document_source_details(owner_id, document_id)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS document_extractions (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      document_id TEXT NOT NULL,
+      status TEXT DEFAULT 'pending' NOT NULL,
+      method TEXT DEFAULT '' NOT NULL,
+      page_count INTEGER DEFAULT 0 NOT NULL,
+      searchable_pages INTEGER DEFAULT 0 NOT NULL,
+      character_count INTEGER DEFAULT 0 NOT NULL,
+      warning TEXT DEFAULT '' NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_document_extractions_owner_document
+      ON document_extractions(owner_id, document_id)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_document_extractions_owner_status
+      ON document_extractions(owner_id, status)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS document_text_chunks (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      document_id TEXT NOT NULL,
+      page_number INTEGER NOT NULL,
+      printed_page TEXT DEFAULT '' NOT NULL,
+      text_content TEXT NOT NULL,
+      method TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_document_text_owner_document_page
+      ON document_text_chunks(owner_id, document_id, page_number)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS source_citations (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      document_id TEXT NOT NULL,
+      lesson_slug TEXT NOT NULL,
+      page_number INTEGER NOT NULL,
+      printed_page TEXT DEFAULT '' NOT NULL,
+      quote TEXT NOT NULL,
+      note_text TEXT DEFAULT '' NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_source_citations_owner_lesson_created
+      ON source_citations(owner_id, lesson_slug, created_at)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_source_citations_owner_document_page
+      ON source_citations(owner_id, document_id, page_number)`),
     database.prepare(`CREATE TABLE IF NOT EXISTS alignment_reviews (
       id TEXT PRIMARY KEY NOT NULL,
       owner_id TEXT NOT NULL,

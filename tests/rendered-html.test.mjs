@@ -98,7 +98,7 @@ test("renders the connected curriculum, adaptive engine, application tools, trav
   assert.match(alignmentHtml, /Neonatal jaundice/);
   assert.match(alignmentHtml, /No direct source/);
   assert.match(lessonHtml, /Professor Mode/);
-  assert.match(lessonHtml, /Adaptive Professor Mode/);
+  assert.match(lessonHtml, /Citation-first Professor Mode/);
   assert.match(lessonHtml, /Need a hint/);
   assert.match(lessonHtml, /Show options/);
   assert.match(lessonHtml, /Sideways concept map/);
@@ -289,7 +289,7 @@ test("renders approved-source search, recoverable history, and private backup", 
   assert.match(runtimeSchema, /CREATE TABLE IF NOT EXISTS learning_versions/);
   assert.match(sourceApi, /decision === "approved"/);
   assert.match(sourceApi, /Book section/);
-  assert.match(sourceApi, /#page=/);
+  assert.match(sourceApi, /\?page=/);
   assert.match(historyApi, /pre_rollback/);
   assert.match(historyApi, /recordLearningVersion/);
   assert.match(learningHistory, /payloadJson/);
@@ -299,6 +299,58 @@ test("renders approved-source search, recoverable history, and private backup", 
   assert.match(masteryCalculation, /assessmentComponent/);
   assert.match(serviceWorker, /poh-tah-toh-travel-v5/);
   assert.match(serviceWorker, /source-search/);
+});
+
+test("renders deep source extraction, linked reading, and citation-first Professor Mode", async () => {
+  const [toolsResponse, searchResponse, readerResponse, lessonResponse, libraryResponse] = await Promise.all([
+    render("/study-tools"),
+    render("/source-search"),
+    render("/reader/example-source"),
+    render("/learn/cardiovascular/cardiac-cycle"),
+    render("/library"),
+  ]);
+  for (const response of [toolsResponse, searchResponse, readerResponse, lessonResponse, libraryResponse]) assert.equal(response.status, 200);
+  const [toolsHtml, searchHtml, readerHtml, lessonHtml, libraryHtml] = await Promise.all([
+    toolsResponse.text(), searchResponse.text(), readerResponse.text(), lessonResponse.text(), libraryResponse.text(),
+  ]);
+  assert.match(toolsHtml, /Deep PDF &amp; Word search/);
+  assert.match(toolsHtml, /Citation-first Professor/);
+  assert.match(searchHtml, /Down to the passage/);
+  assert.match(searchHtml, /private searchable pages/);
+  assert.match(readerHtml, /Loading the private indexed section/);
+  assert.match(lessonHtml, /Citation-first Professor Mode/);
+  assert.match(lessonHtml, /Evidence boundary/);
+  assert.match(libraryHtml, /Private deep index/);
+
+  const [migration, schema, runtimeSchema, extractionClient, extractionApi, searchApi, readerApi, evidenceApi, backupApi] = await Promise.all([
+    readFile(new URL("../drizzle/0006_nasty_photon.sql", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/runtime-schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/source-extraction-client.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/document-extractions/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/source-search/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/source-reader/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/professor-evidence/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/backup/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(migration, /CREATE TABLE `document_extractions`/);
+  assert.match(migration, /CREATE TABLE `document_text_chunks`/);
+  assert.match(migration, /CREATE TABLE `source_citations`/);
+  assert.match(schema, /documentExtractions|documentTextChunks|sourceCitations/);
+  assert.match(runtimeSchema, /CREATE TABLE IF NOT EXISTS source_citations/);
+  assert.match(extractionClient, /pdfjs-dist/);
+  assert.match(extractionClient, /tesseract\.js/);
+  assert.match(extractionClient, /mammoth/);
+  assert.match(extractionClient, /OCR_PAGE_LIMIT/);
+  assert.match(extractionApi, /MAX_TOTAL_CHARACTERS/);
+  assert.match(searchApi, /documentTextChunks/);
+  assert.doesNotMatch(searchApi, /getStudyBucket/);
+  assert.match(readerApi, /normalizeQuote\(chunk\.textContent\)\.includes/);
+  assert.match(readerApi, /recordLearningVersion/);
+  assert.match(evidenceApi, /decision === "approved"/);
+  assert.match(evidenceApi, /gate: evidence\.length \? "supported"/);
+  assert.match(backupApi, /sourceCitations/);
+  assert.doesNotMatch(backupApi, /documentTextChunks/);
 });
 
 test("removes the disposable starter and includes production brand metadata", async () => {

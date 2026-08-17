@@ -31,6 +31,20 @@ type SourceReference = {
   pageReference: string;
   note: string;
   decision: "pending" | "approved" | "changes_requested";
+  documentId: string | null;
+  uploadedSection: string;
+  extractionStatus: string;
+  searchablePages: number;
+  readerHref: string | null;
+};
+
+type ProfessorEvidence = {
+  topic: string;
+  gate: "supported" | "source_required" | "index_required" | "passage_not_found";
+  approvedSources: number;
+  indexedSources: number;
+  message: string;
+  evidence: Array<{ documentId: string; bookTitle: string; section: string; pageNumber: number; printedPage: string; quote: string; method: string; readerHref: string; ocr: boolean }>;
 };
 
 type ProfessorLessonWorkspaceProps = {
@@ -75,6 +89,7 @@ export function ProfessorLessonWorkspace({
   const [noteMap, setNoteMap] = useState<NoteMapNode[]>([]);
   const [mapState, setMapState] = useState("");
   const [travelState, setTravelState] = useState("");
+  const [professorEvidence, setProfessorEvidence] = useState<ProfessorEvidence | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -104,12 +119,25 @@ export function ProfessorLessonWorkspace({
     return () => { active = false; };
   }, [lessonSlug, steps.length]);
 
+  useEffect(() => {
+    let active = true;
+    const topic = `${steps[activeStep].title} ${steps[activeStep].cue}`;
+    fetch(`/api/professor-evidence?lesson=${encodeURIComponent(lessonSlug)}&topic=${encodeURIComponent(topic)}`).then(async (response) => {
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Evidence check failed.");
+      return payload as Omit<ProfessorEvidence, "topic">;
+    }).then((payload) => { if (active) setProfessorEvidence({ ...payload, topic }); }).catch(() => { if (active) setProfessorEvidence({ topic, gate: "source_required", approvedSources: 0, indexedSources: 0, evidence: [], message: "The approved evidence check is unavailable right now." }); });
+    return () => { active = false; };
+  }, [activeStep, lessonSlug, steps]);
+
   const progressPercent = Math.round((completedPoints / steps.length) * 100);
   const step = steps[activeStep];
   const complete = completedPoints >= steps.length;
   const nextLabel = activeStep === steps.length - 1 ? "Finish foundation" : "Teach next point";
   const mapProgress = useMemo(() => Math.max(completedPoints, activeStep), [activeStep, completedPoints]);
   const approvedSources = sources.filter((source) => source.decision === "approved").length;
+  const evidenceTopic = `${step.title} ${step.cue}`;
+  const activeEvidence = professorEvidence?.topic === evidenceTopic ? professorEvidence : null;
 
   async function persistProgress(points: number) {
     setCompletedPoints(points);
@@ -208,12 +236,12 @@ export function ProfessorLessonWorkspace({
           {sources.length ? sources.map((source) => (
             <article key={source.id}>
               <span className="source-reference-book">{source.shortTitle}</span>
-              <div><small>{source.role}</small><strong>{source.title} · {source.edition}</strong><p>{source.chapter} · {source.pageReference}</p><em>{source.note}</em></div>
+              <div><small>{source.role}</small><strong>{source.title} · {source.edition}</strong><p>{source.uploadedSection || source.chapter} · {source.pageReference}</p><em>{source.note}</em>{source.readerHref ? <a className="source-reader-link" href={source.readerHref}>{source.searchablePages ? `Read ${source.searchablePages} indexed pages` : "Open source reader"} →</a> : null}</div>
               <b className={`source-decision source-decision--${source.decision}`}>{source.decision === "approved" ? "Approved route" : source.decision === "changes_requested" ? "Change flagged" : "Review pending"}</b>
             </article>
           )) : <p className="source-empty">The source route is loading. The lesson remains usable without opening a full PDF.</p>}
         </div>
-        <footer><span>Chapter and page entries are reading pointers, not quotations.</span><a href="/alignment#foundation-map-title">Review mapping →</a></footer>
+        <footer><span>Only extracted passages shown below count as source evidence. Reading pointers remain non-quotation guides.</span><a href="/alignment#foundation-map-title">Review mapping →</a></footer>
       </section>
 
       <section className="mind-map" aria-labelledby="mind-map-title">
@@ -229,16 +257,17 @@ export function ProfessorLessonWorkspace({
 
       <section className="lesson-grid">
         <article className="professor-card">
-          <header><div className="professor-avatar"><span>Prof.</span><b>V</b></div><div><span className="eyebrow">Adaptive Professor Mode · Point {activeStep + 1} of {steps.length}</span><h2>{step.title}</h2></div><span className="teaching-live"><i /> Professor explanation</span></header>
-          <div className="professor-cue"><span>Start here</span><blockquote>{step.cue}</blockquote></div>
-          <div className="professor-detail"><span className="detail-number">{String(activeStep + 1).padStart(2, "0")}</span><div><h3>Walk through it</h3><p>{step.detail}</p>
+          <header><div className="professor-avatar"><span>Prof.</span><b>V</b></div><div><span className="eyebrow">Citation-first Professor Mode · Point {activeStep + 1} of {steps.length}</span><h2>{step.title}</h2></div><span className={`teaching-live ${activeEvidence?.gate === "supported" ? "is-supported" : ""}`}><i /> {activeEvidence?.gate === "supported" ? "Approved evidence" : "Source gate"}</span></header>
+          <section className={`professor-evidence professor-evidence--${activeEvidence?.gate ?? "loading"}`}><header><div><span>{activeEvidence?.gate === "supported" ? "From the approved source" : "Evidence boundary"}</span><strong>{activeEvidence?.gate === "supported" ? "Read the passage before the explanation." : activeEvidence?.message || "Checking approved indexed passages…"}</strong></div>{activeEvidence?.gate === "supported" ? <b>{activeEvidence.evidence.length} cited {activeEvidence.evidence.length === 1 ? "passage" : "passages"}</b> : null}</header>{activeEvidence?.evidence.map((item) => <blockquote key={`${item.documentId}-${item.pageNumber}`}><p>{item.quote}</p><footer><cite>{item.bookTitle}{item.section ? ` · ${item.section}` : ""} · {item.printedPage ? `p. ${item.printedPage}` : `PDF page ${item.pageNumber}`}{item.ocr ? " · OCR—verify original" : ""}</cite><a href={item.readerHref}>Open and highlight →</a></footer></blockquote>)}{activeEvidence && activeEvidence.gate !== "supported" ? <div className="professor-source-gate"><span>⌁</span><p><strong>No source claim is being made for this point.</strong>{activeEvidence.gate === "source_required" ? "Approve and connect an uploaded Book section first." : activeEvidence.gate === "index_required" ? "Build the linked section’s deep index in the Library." : "Open the linked reader and verify the concept manually."}</p><a href={activeEvidence.gate === "source_required" ? "/alignment" : "/library"}>{activeEvidence.gate === "source_required" ? "Review sources" : "Open Library"}</a></div> : null}<small>Evidence above is extracted from your approved section. Everything below is labeled explanation or connection.</small></section>
+          <div className="professor-cue"><span>Professor explanation · not a quotation</span><blockquote>{step.cue}</blockquote></div>
+          <div className="professor-detail"><span className="detail-number">{String(activeStep + 1).padStart(2, "0")}</span><div><h3>Professor explanation</h3><p>{step.detail}</p>
             <div className="adaptive-help">
               <header><span>Adaptive help</span><small>Choose how much support you need.</small></header>
               <div><button type="button" className={stepHelp[activeStep] >= 1 ? "is-active" : ""} onClick={() => setStepHelp((current) => ({ ...current, [activeStep]: Math.max(current[activeStep] ?? 0, 1) }))}>Simplify this</button><button type="button" className={stepHelp[activeStep] >= 2 ? "is-active" : ""} onClick={() => setStepHelp((current) => ({ ...current, [activeStep]: Math.max(current[activeStep] ?? 0, 2) }))}>Check understanding</button></div>
               {stepHelp[activeStep] >= 1 ? <p><strong>Plain-language version:</strong> {step.hint ?? step.cue}</p> : null}
               {stepHelp[activeStep] >= 2 ? <p><strong>Quick check:</strong> {step.check ?? `Can you explain why “${step.title}” happens before moving on?`}</p> : null}
             </div>
-            <aside><span aria-hidden="true">↗</span><p><strong>Clinical connection</strong>{step.connect}</p></aside></div></div>
+            <aside><span aria-hidden="true">↗</span><p><strong>Connection to later topics · Professor extension</strong>{step.connect}</p></aside></div></div>
           <footer><button className="lesson-back" type="button" disabled={activeStep === 0} onClick={() => setActiveStep((current) => Math.max(0, current - 1))}>← Previous</button><button className="lesson-next" type="button" onClick={advance}>{nextLabel}<span>→</span></button></footer>
         </article>
 
