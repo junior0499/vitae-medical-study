@@ -297,7 +297,7 @@ test("renders approved-source search, recoverable history, and private backup", 
   assert.match(backupApi, /delete safe\.objectKey/);
   assert.match(backupApi, /content-disposition/);
   assert.match(masteryCalculation, /assessmentComponent/);
-  assert.match(serviceWorker, /poh-tah-toh-travel-v6/);
+  assert.match(serviceWorker, /poh-tah-toh-travel-v7/);
   assert.match(serviceWorker, /source-search/);
 });
 
@@ -410,6 +410,65 @@ test("renders objective evidence, a daily queue, adaptive spacing, and reviewed 
   assert.match(backupApi, /generatedQuestions/);
   assert.match(serviceWorker, /question-studio/);
   assert.match(serviceWorker, /\/today/);
+});
+
+test("renders source-cited reasoning, misconception repair, and approved cross-book comparison", async () => {
+  const [toolsResponse, reasoningResponse, misconceptionsResponse, compareResponse] = await Promise.all([
+    render("/study-tools"),
+    render("/reasoning-ladder"),
+    render("/misconceptions"),
+    render("/source-compare"),
+  ]);
+  for (const response of [toolsResponse, reasoningResponse, misconceptionsResponse, compareResponse]) assert.equal(response.status, 200);
+  const [toolsHtml, reasoningHtml, misconceptionsHtml, compareHtml] = await Promise.all([
+    toolsResponse.text(), reasoningResponse.text(), misconceptionsResponse.text(), compareResponse.text(),
+  ]);
+  assert.match(toolsHtml, /Clinical reasoning ladder/);
+  assert.match(toolsHtml, /Misconception detector/);
+  assert.match(toolsHtml, /Cross-book comparison/);
+  assert.match(reasoningHtml, /Reason from normal/);
+  assert.match(reasoningHtml, /Six linked decisions/);
+  assert.match(misconceptionsHtml, /Find the confusion/);
+  assert.match(misconceptionsHtml, /Error pattern/);
+  assert.match(compareHtml, /Compare the passages/);
+  assert.match(compareHtml, /Two approved books/);
+
+  const [migration, schema, runtimeSchema, reasoningApi, misconceptionsApi, comparisonApi, reasoningLibrary, dailyApi, backupApi, serviceWorker] = await Promise.all([
+    readFile(new URL("../drizzle/0008_absent_randall_flagg.sql", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/runtime-schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/reasoning-ladder/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/misconceptions/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/source-comparison/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/source-reasoning.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/daily-queue/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/backup/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(migration, /CREATE TABLE `clinical_reasoning_progress`/);
+  assert.match(migration, /CREATE TABLE `misconception_repairs`/);
+  assert.match(migration, /CREATE TABLE `objective_source_links`/);
+  assert.match(schema, /clinicalReasoningProgress|misconceptionRepairs|objectiveSourceLinks/);
+  assert.match(runtimeSchema, /CREATE TABLE IF NOT EXISTS clinical_reasoning_progress/);
+  assert.match(reasoningApi, /decision === "approved"/);
+  assert.match(reasoningApi, /sourceQuote === stage\.evidence\.quote/);
+  assert.match(reasoningApi, /Complete the earlier stage or attach a matching approved passage first/);
+  assert.match(misconceptionsApi, /parseIncorrectQuestionCounts/);
+  assert.match(misconceptionsApi, /recall lapses/);
+  assert.match(misconceptionsApi, /not a diagnosis of the learner/);
+  assert.match(comparisonApi, /Both books must be approved for this objective before comparison/);
+  assert.match(comparisonApi, /pending_review/);
+  assert.doesNotMatch(reasoningApi, /getStudyBucket/);
+  assert.doesNotMatch(comparisonApi, /getStudyBucket/);
+  assert.match(reasoningLibrary, /Normal physiology/);
+  assert.match(reasoningLibrary, /Possible directional difference/);
+  assert.match(reasoningLibrary, /No automatic contradiction detected/);
+  assert.match(dailyApi, /misconception-/);
+  assert.match(dailyApi, /reasoning-/);
+  assert.match(backupApi, /objectiveSourceLinks|clinicalReasoningProgress|misconceptionRepairs/);
+  assert.match(serviceWorker, /reasoning-ladder/);
+  assert.match(serviceWorker, /misconceptions/);
+  assert.match(serviceWorker, /source-compare/);
 });
 
 test("removes the disposable starter and includes production brand metadata", async () => {

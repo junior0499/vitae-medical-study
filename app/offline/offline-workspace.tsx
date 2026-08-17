@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { offlineQueueCount, saveTravelPack } from "@/lib/offline-client";
 
-const corePack = ["/learn", "/today", "/routes", "/learning-graph", "/diagnostic", "/cases", "/visual-lab", "/practice", "/question-studio", "/viva", "/comparisons", "/interleaved", "/confidence", "/exam-blueprint", "/learn/cardiovascular/cardiac-cycle", "/learn/cardiovascular/cardiac-output", "/assessment", "/review", "/mistakes", "/maps", "/offline", "/study-tools", "/source-search", "/history", "/backup"];
+const corePack = ["/learn", "/today", "/routes", "/learning-graph", "/diagnostic", "/cases", "/reasoning-ladder", "/misconceptions", "/source-compare", "/visual-lab", "/practice", "/question-studio", "/viva", "/comparisons", "/interleaved", "/confidence", "/exam-blueprint", "/learn/cardiovascular/cardiac-cycle", "/learn/cardiovascular/cardiac-output", "/assessment", "/review", "/mistakes", "/maps", "/offline", "/study-tools", "/source-search", "/history", "/backup"];
 
 export function OfflineWorkspace() {
   const [online, setOnline] = useState(() => typeof navigator === "undefined" ? true : navigator.onLine);

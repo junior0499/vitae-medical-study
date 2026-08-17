@@ -227,6 +227,55 @@ export function ensureVitaeSchema() {
       ON generated_questions(owner_id, objective_id, status)`),
     database.prepare(`CREATE INDEX IF NOT EXISTS idx_generated_questions_owner_status_updated
       ON generated_questions(owner_id, status, updated_at)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS objective_source_links (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      objective_id TEXT NOT NULL,
+      document_id TEXT NOT NULL,
+      role TEXT DEFAULT 'support' NOT NULL,
+      decision TEXT DEFAULT 'pending_review' NOT NULL,
+      reviewer_note TEXT DEFAULT '' NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_objective_source_owner_objective_document
+      ON objective_source_links(owner_id, objective_id, document_id)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_objective_source_owner_objective_decision
+      ON objective_source_links(owner_id, objective_id, decision)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_objective_source_owner_document
+      ON objective_source_links(owner_id, document_id)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS clinical_reasoning_progress (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      objective_id TEXT NOT NULL,
+      stage_key TEXT NOT NULL,
+      note_text TEXT DEFAULT '' NOT NULL,
+      status TEXT DEFAULT 'complete' NOT NULL,
+      document_id TEXT NOT NULL,
+      page_number INTEGER NOT NULL,
+      printed_page TEXT DEFAULT '' NOT NULL,
+      source_quote TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_reasoning_progress_owner_objective_stage
+      ON clinical_reasoning_progress(owner_id, objective_id, stage_key)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_reasoning_progress_owner_objective
+      ON clinical_reasoning_progress(owner_id, objective_id)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS misconception_repairs (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      concept_key TEXT NOT NULL,
+      lesson_slug TEXT NOT NULL,
+      reflection TEXT DEFAULT '' NOT NULL,
+      evidence_json TEXT DEFAULT '{}' NOT NULL,
+      status TEXT DEFAULT 'completed' NOT NULL,
+      completed_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_misconception_repairs_owner_concept
+      ON misconception_repairs(owner_id, concept_key)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_misconception_repairs_owner_updated
+      ON misconception_repairs(owner_id, updated_at)`),
     database.prepare(`CREATE TABLE IF NOT EXISTS assessment_attempts (
       id TEXT PRIMARY KEY NOT NULL,
       owner_id TEXT NOT NULL,

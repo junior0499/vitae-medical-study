@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { alignmentReviews, assessmentAttempts, dailyQueueActions, documentExtractions, documentSourceDetails, generatedQuestions, importedAlignments, learningActivityAttempts, learningVersions, lessonDrafts, lessonNotes, lessonProgress, mistakeNotebook, noteMindMaps, recallReviews, recallReviewSignals, sourceCitations, studyDocuments } from "@/db/schema";
+import { alignmentReviews, assessmentAttempts, clinicalReasoningProgress, dailyQueueActions, documentExtractions, documentSourceDetails, generatedQuestions, importedAlignments, learningActivityAttempts, learningVersions, lessonDrafts, lessonNotes, lessonProgress, misconceptionRepairs, mistakeNotebook, noteMindMaps, objectiveSourceLinks, recallReviews, recallReviewSignals, sourceCitations, studyDocuments } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 import { calculateMastery } from "@/lib/mastery-calculation";
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   if (!ownerId) return unauthorizedResponse();
   try {
     await ensureVitaeSchema();
-    const [progress, notes, documents, sourceDetails, extractions, citations, reviews, imported, drafts, recall, recallSignals, dailyActions, questions, assessments, mistakes, maps, activities, versions] = await Promise.all([
+    const [progress, notes, documents, sourceDetails, extractions, citations, reviews, imported, drafts, recall, recallSignals, dailyActions, questions, supportLinks, reasoningProgress, repairs, assessments, mistakes, maps, activities, versions] = await Promise.all([
       getDb().select().from(lessonProgress).where(eq(lessonProgress.ownerId, ownerId)),
       getDb().select().from(lessonNotes).where(eq(lessonNotes.ownerId, ownerId)),
       getDb().select().from(studyDocuments).where(eq(studyDocuments.ownerId, ownerId)),
@@ -33,6 +33,9 @@ export async function GET(request: Request) {
       getDb().select().from(recallReviewSignals).where(eq(recallReviewSignals.ownerId, ownerId)),
       getDb().select().from(dailyQueueActions).where(eq(dailyQueueActions.ownerId, ownerId)),
       getDb().select().from(generatedQuestions).where(eq(generatedQuestions.ownerId, ownerId)),
+      getDb().select().from(objectiveSourceLinks).where(eq(objectiveSourceLinks.ownerId, ownerId)),
+      getDb().select().from(clinicalReasoningProgress).where(eq(clinicalReasoningProgress.ownerId, ownerId)),
+      getDb().select().from(misconceptionRepairs).where(eq(misconceptionRepairs.ownerId, ownerId)),
       getDb().select().from(assessmentAttempts).where(eq(assessmentAttempts.ownerId, ownerId)),
       getDb().select().from(mistakeNotebook).where(eq(mistakeNotebook.ownerId, ownerId)),
       getDb().select().from(noteMindMaps).where(eq(noteMindMaps.ownerId, ownerId)),
@@ -51,6 +54,9 @@ export async function GET(request: Request) {
       adaptiveReviewSignals: recallSignals.length,
       dailyQueueActions: dailyActions.length,
       generatedQuestions: questions.length,
+      approvedSupportSources: supportLinks.length,
+      clinicalReasoningStages: reasoningProgress.length,
+      misconceptionRepairs: repairs.length,
       assessmentAttempts: assessments.length,
       learningActivities: activities.length,
       mistakes: mistakes.length,
@@ -64,7 +70,7 @@ export async function GET(request: Request) {
     const generatedAt = new Date().toISOString();
     const archive = {
       format: "poh-tah-toh-study-backup",
-      schemaVersion: 2,
+      schemaVersion: 3,
       generatedAt,
       privacy: "Owner-scoped export. Internal owner identifiers and storage object keys are excluded.",
       sourceFileNotice: "The archive includes source metadata and references, not copyrighted PDF or Word file bytes.",
@@ -84,6 +90,9 @@ export async function GET(request: Request) {
         recallReviewSignals: sanitizeRows(recallSignals),
         dailyQueueActions: sanitizeRows(dailyActions),
         generatedQuestions: sanitizeRows(questions),
+        objectiveSourceLinks: sanitizeRows(supportLinks),
+        clinicalReasoningProgress: sanitizeRows(reasoningProgress),
+        misconceptionRepairs: sanitizeRows(repairs),
         assessmentAttempts: sanitizeRows(assessments),
         learningActivityAttempts: sanitizeRows(activities),
         mistakeNotebook: sanitizeRows(mistakes),

@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { alignmentReviews, assessmentAttempts, dailyQueueActions, generatedQuestions, lessonDrafts, lessonProgress, mistakeNotebook, recallReviews, recallReviewSignals } from "@/db/schema";
+import { alignmentReviews, assessmentAttempts, clinicalReasoningProgress, dailyQueueActions, generatedQuestions, learningActivityAttempts, lessonDrafts, lessonProgress, misconceptionRepairs, mistakeNotebook, recallReviews, recallReviewSignals } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 import { findCoverageObjective } from "@/lib/subject-alignments";
@@ -17,21 +17,29 @@ function taskOrder(a: DailyTask, b: DailyTask) {
   return b.priority - a.priority || a.key.localeCompare(b.key);
 }
 
+function misconceptionKey(mistake: typeof mistakeNotebook.$inferSelect) {
+  const label = mistake.sourceLabel.split("·").map((part) => part.trim()).filter(Boolean).slice(0, 2).join(" · ") || mistake.lessonSlug;
+  return `${mistake.lessonSlug}:${label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 100)}`;
+}
+
 export async function GET(request: Request) {
   const ownerId = getCurrentOwnerId(request);
   if (!ownerId) return unauthorizedResponse();
   try {
     await ensureVitaeSchema();
     const dateKey = indiaDateKey();
-    const [progress, reviews, signals, mistakes, attempts, drafts, alignmentDecisions, questions, actions] = await Promise.all([
+    const [progress, reviews, signals, mistakes, attempts, activities, drafts, alignmentDecisions, questions, reasoningProgress, repairs, actions] = await Promise.all([
       getDb().select().from(lessonProgress).where(eq(lessonProgress.ownerId, ownerId)),
       getDb().select().from(recallReviews).where(eq(recallReviews.ownerId, ownerId)),
       getDb().select().from(recallReviewSignals).where(eq(recallReviewSignals.ownerId, ownerId)),
       getDb().select().from(mistakeNotebook).where(eq(mistakeNotebook.ownerId, ownerId)),
       getDb().select().from(assessmentAttempts).where(eq(assessmentAttempts.ownerId, ownerId)),
+      getDb().select().from(learningActivityAttempts).where(eq(learningActivityAttempts.ownerId, ownerId)),
       getDb().select().from(lessonDrafts).where(eq(lessonDrafts.ownerId, ownerId)),
       getDb().select().from(alignmentReviews).where(eq(alignmentReviews.ownerId, ownerId)),
       getDb().select().from(generatedQuestions).where(eq(generatedQuestions.ownerId, ownerId)),
+      getDb().select().from(clinicalReasoningProgress).where(eq(clinicalReasoningProgress.ownerId, ownerId)),
+      getDb().select().from(misconceptionRepairs).where(eq(misconceptionRepairs.ownerId, ownerId)),
       getDb().select().from(dailyQueueActions).where(and(eq(dailyQueueActions.ownerId, ownerId), eq(dailyQueueActions.dateKey, dateKey))),
     ]);
     const now = new Date().toISOString();
@@ -44,6 +52,26 @@ export async function GET(request: Request) {
     const tasks: DailyTask[] = [];
 
     if (dueMistakes.length) tasks.push({ key: "mistakes-due", category: "mistake", title: `Correct ${dueMistakes.length} due ${dueMistakes.length === 1 ? "mistake" : "mistakes"}`, reason: "An unresolved incorrect concept has priority over adding new material.", href: "/mistakes", action: "Open correction notebook", minutes: Math.min(20, Math.max(5, dueMistakes.length * 5)), priority: 110 + dueMistakes.length, evidence: `${dueMistakes.length} open correction ${dueMistakes.length === 1 ? "is" : "are"} due` });
+
+    const incorrectCounts = new Map<string, number>();
+    for (const activity of activities) {
+      try {
+        const details = JSON.parse(activity.detailsJson) as { results?: Array<{ questionId?: string; correct?: boolean }> };
+        for (const result of details.results ?? []) if (result.questionId && result.correct === false) incorrectCounts.set(result.questionId, (incorrectCounts.get(result.questionId) ?? 0) + 1);
+      } catch { /* Ignore malformed legacy attempt evidence. */ }
+    }
+    const misconceptionSignals = new Map<string, { count: number; latest: string }>();
+    for (const mistake of mistakes.filter((item) => item.status === "open")) {
+      const key = misconceptionKey(mistake);
+      const signal = signals.find((item) => item.lessonSlug === mistake.lessonSlug && item.questionKey === mistake.questionKey);
+      const current = misconceptionSignals.get(key) ?? { count: 0, latest: "" };
+      const count = Math.max(1, incorrectCounts.get(mistake.questionKey) ?? 0) + (signal?.lapseCount ?? 0);
+      const latest = [current.latest, mistake.updatedAt, signal?.updatedAt ?? ""].sort().at(-1) ?? "";
+      misconceptionSignals.set(key, { count: current.count + count, latest });
+    }
+    const repairMap = new Map(repairs.map((repair) => [repair.conceptKey, repair.updatedAt]));
+    const misconception = [...misconceptionSignals.entries()].filter(([conceptKey, signal]) => signal.count >= 2 && (repairMap.get(conceptKey) ?? "") < signal.latest).sort((a, b) => b[1].count - a[1].count)[0];
+    if (misconception) tasks.push({ key: `misconception-${misconception[0].replace(/[^a-z0-9-]+/g, "-")}`, category: "mistake", title: "Repair a repeated misconception", reason: "Multiple wrong answers or recall lapses now point to the same source-labelled concept pattern.", href: "/misconceptions", action: "Open corrective micro-lesson", minutes: 8, priority: 108 + misconception[1].count, evidence: `${misconception[1].count} linked error signals` });
 
     if (dueReviews.length) {
       const averageRisk = Math.round(dueReviews.reduce((sum, review) => sum + (signalMap.get(`${review.lessonSlug}:${review.questionKey}`)?.forgettingScore ?? 25), 0) / dueReviews.length);
@@ -70,6 +98,14 @@ export async function GET(request: Request) {
     }
 
     if (approvedQuestions.length) tasks.push({ key: "approved-questions", category: "practice", title: `Use ${Math.min(approvedQuestions.length, 5)} approved source questions`, reason: "These questions passed the human review gate and retain their exact source pages.", href: "/question-studio", action: "Open approved bank", minutes: Math.min(20, Math.max(8, approvedQuestions.length * 3)), priority: 72, evidence: `${approvedQuestions.length} approved source-backed ${approvedQuestions.length === 1 ? "question" : "questions"}` });
+
+    const reasoningGroups = new Map<string, number>();
+    for (const stage of reasoningProgress.filter((item) => item.status === "complete")) reasoningGroups.set(stage.objectiveId, (reasoningGroups.get(stage.objectiveId) ?? 0) + 1);
+    const partialReasoning = [...reasoningGroups.entries()].filter(([, count]) => count > 0 && count < 6).sort((a, b) => b[1] - a[1])[0];
+    if (partialReasoning) {
+      const objective = findCoverageObjective(partialReasoning[0]);
+      tasks.push({ key: `reasoning-${partialReasoning[0]}`, category: "practice", title: `Continue the ${objective?.system ?? "clinical"} reasoning ladder`, reason: "A source-backed clinical chain is partly complete; finishing the next link is more valuable than starting another isolated activity.", href: `/reasoning-ladder?objective=${partialReasoning[0]}`, action: "Continue reasoning", minutes: 10, priority: 84, evidence: `${partialReasoning[1]} of 6 reasoning stages complete` });
+    }
 
     const latestAttempt = attempts.sort((a, b) => b.completedAt.localeCompare(a.completedAt))[0];
     const accuracy = latestAttempt ? Math.round(latestAttempt.correctCount / Math.max(1, latestAttempt.totalCount) * 100) : null;

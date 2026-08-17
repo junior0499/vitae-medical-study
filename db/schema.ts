@@ -219,6 +219,54 @@ export const generatedQuestions = sqliteTable("generated_questions", {
   index("idx_generated_questions_owner_status_updated").on(table.ownerId, table.status, table.updatedAt),
 ]);
 
+export const objectiveSourceLinks = sqliteTable("objective_source_links", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  objectiveId: text("objective_id").notNull(),
+  documentId: text("document_id").notNull(),
+  role: text("role").notNull().default("support"),
+  decision: text("decision").notNull().default("pending_review"),
+  reviewerNote: text("reviewer_note").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_objective_source_owner_objective_document").on(table.ownerId, table.objectiveId, table.documentId),
+  index("idx_objective_source_owner_objective_decision").on(table.ownerId, table.objectiveId, table.decision),
+  index("idx_objective_source_owner_document").on(table.ownerId, table.documentId),
+]);
+
+export const clinicalReasoningProgress = sqliteTable("clinical_reasoning_progress", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  objectiveId: text("objective_id").notNull(),
+  stageKey: text("stage_key").notNull(),
+  noteText: text("note_text").notNull().default(""),
+  status: text("status").notNull().default("complete"),
+  documentId: text("document_id").notNull(),
+  pageNumber: integer("page_number").notNull(),
+  printedPage: text("printed_page").notNull().default(""),
+  sourceQuote: text("source_quote").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_reasoning_progress_owner_objective_stage").on(table.ownerId, table.objectiveId, table.stageKey),
+  index("idx_reasoning_progress_owner_objective").on(table.ownerId, table.objectiveId),
+]);
+
+export const misconceptionRepairs = sqliteTable("misconception_repairs", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  conceptKey: text("concept_key").notNull(),
+  lessonSlug: text("lesson_slug").notNull(),
+  reflection: text("reflection").notNull().default(""),
+  evidenceJson: text("evidence_json").notNull().default("{}"),
+  status: text("status").notNull().default("completed"),
+  completedAt: text("completed_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_misconception_repairs_owner_concept").on(table.ownerId, table.conceptKey),
+  index("idx_misconception_repairs_owner_updated").on(table.ownerId, table.updatedAt),
+]);
+
 export const assessmentAttempts = sqliteTable("assessment_attempts", {
   id: text("id").primaryKey(),
   ownerId: text("owner_id").notNull(),

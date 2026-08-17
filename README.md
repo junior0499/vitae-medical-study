@@ -25,6 +25,9 @@ Poh-tah-toh is a private, source-grounded learning workspace for a medical stude
 - an adaptive daily learning queue driven by due work, weakness, mistakes, completion, and assessment evidence
 - spaced repetition informed by accuracy, difficulty, confidence, response time, overdue time, and lapse history
 - an approved-source question studio for human-reviewed MCQ, SAQ, viva, and clinical-case drafts with exact page citations
+- a six-stage clinical reasoning ladder that locks unsupported links and stores the learner’s source-cited reasoning notes
+- repeated-error and recall-lapse clustering with short corrective misconception lessons
+- two-book approved-passage comparison with cautious wording, direction, negation, and numerical review flags
 - recoverable history for notes, maps, source decisions, and lesson drafts
 - private structured backup of learning, assessment, mastery, and source records
 - accessible, responsive layout for desktop and mobile
