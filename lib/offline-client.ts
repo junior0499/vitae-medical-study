@@ -48,7 +48,13 @@ export async function flushOfflineActions() {
 export async function saveTravelPack(urls: string[]) {
   if (!("serviceWorker" in navigator)) throw new Error("Offline saving is not supported in this browser.");
   const registration = await navigator.serviceWorker.ready;
-  registration.active?.postMessage({ type: "CACHE_TRAVEL_PACK", urls });
+  if (!registration.active) throw new Error("The offline helper is not ready yet. Refresh once and retry.");
+  return new Promise<{ cached: number; failed: number }>((resolve, reject) => {
+    const channel = new MessageChannel();
+    const timeout = window.setTimeout(() => reject(new Error("Offline saving took too long. Retry while the connection is stable.")), 45_000);
+    channel.port1.onmessage = (event) => { window.clearTimeout(timeout); if (event.data?.ok) resolve({ cached: Number(event.data.cached) || 0, failed: Number(event.data.failed) || 0 }); else reject(new Error(event.data?.error ?? "The offline pack could not be saved.")); };
+    registration.active?.postMessage({ type: "CACHE_TRAVEL_PACK", urls }, [channel.port2]);
+  });
 }
 
 export function offlineQueueCount() {

@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { documentExtractions, documentSourceDetails, documentTextChunks, studyDocuments } from "@/db/schema";
+import { documentExtractions, documentSourceDetails, documentTextChunks, sourceProcessingJobs, sourceSearchCache, sourceSearchTerms, studyDocuments } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 
@@ -60,10 +60,13 @@ export async function POST(request: Request) {
     });
     const now = new Date().toISOString();
     await getDb().delete(documentTextChunks).where(and(eq(documentTextChunks.ownerId, ownerId), eq(documentTextChunks.documentId, documentId)));
+    await getDb().delete(sourceSearchTerms).where(and(eq(sourceSearchTerms.ownerId, ownerId), eq(sourceSearchTerms.documentId, documentId)));
+    await getDb().delete(sourceSearchCache).where(eq(sourceSearchCache.ownerId, ownerId));
     if (pages.length) await getDb().insert(documentTextChunks).values(pages);
     const pageCount = Math.max(0, Math.min(5000, Math.round(Number(body.pageCount) || pages.length)));
     const values = { status: status === "ready" && !pages.length ? "failed" : status, method, pageCount, searchablePages: pages.length, characterCount: usedCharacters, warning: String(body.warning ?? "").slice(0, 500), updatedAt: now };
     const [extraction] = await getDb().insert(documentExtractions).values({ id: crypto.randomUUID(), ownerId, documentId, ...values, createdAt: existing?.createdAt ?? now }).onConflictDoUpdate({ target: [documentExtractions.ownerId, documentExtractions.documentId], set: values }).returning();
-    return Response.json({ extraction }, { status: 201 });
+    const [processingJob] = await getDb().insert(sourceProcessingJobs).values({ id: crypto.randomUUID(), ownerId, documentId, status: pages.length ? "queued" : "ready", totalPages: pages.length, processedPages: 0, cursorPage: 0, warning: values.warning, createdAt: now, updatedAt: now }).onConflictDoUpdate({ target: [sourceProcessingJobs.ownerId, sourceProcessingJobs.documentId], set: { status: pages.length ? "queued" : "ready", totalPages: pages.length, processedPages: 0, cursorPage: 0, warning: values.warning, updatedAt: now } }).returning();
+    return Response.json({ extraction, processingJob }, { status: 201 });
   } catch { return Response.json({ error: "The deep source index could not be saved." }, { status: 500 }); }
 }

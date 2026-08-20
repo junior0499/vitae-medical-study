@@ -17,6 +17,7 @@ type StudyDocument = {
   extraction: { status: string; method: string; pageCount: number; searchablePages: number; characterCount: number; warning: string } | null;
 };
 type FileUploadState = "waiting" | "uploading" | "extracting" | "indexing" | "ready" | "partial" | "needs_ocr" | "error";
+type ProcessingJob = { id: string; documentId: string; status: string; totalPages: number; processedPages: number; filename: string; subject: string; warning: string };
 
 const subjects = ["Internal Medicine", "Perioperative Medicine", "Women & Child Health", "Foundations", "Other"];
 
@@ -41,6 +42,7 @@ export function LibraryWorkspace() {
   const [fileStates, setFileStates] = useState<Record<string, FileUploadState>>({});
   const [fileProgress, setFileProgress] = useState<Record<string, string>>({});
   const [indexStates, setIndexStates] = useState<Record<string, string>>({});
+  const [processingJobs, setProcessingJobs] = useState<ProcessingJob[]>([]);
 
   const fileKey = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
 
@@ -52,6 +54,10 @@ export function LibraryWorkspace() {
     } catch { /* The empty library remains useful when offline. */ }
   }
 
+  async function loadProcessingJobs() {
+    try { const response = await fetch("/api/source-processing"); const data = await response.json(); if (response.ok) setProcessingJobs(data.jobs ?? []); } catch { /* The persisted queue can be retried later. */ }
+  }
+
   useEffect(() => {
     let active = true;
     fetch("/api/documents").then((response) => response.ok ? response.json() : null).then((data) => {
@@ -59,6 +65,7 @@ export function LibraryWorkspace() {
     }).catch(() => undefined);
     return () => { active = false; };
   }, []);
+  useEffect(() => { let active = true; fetch("/api/source-processing").then((response) => response.ok ? response.json() : null).then((data) => { if (active && data?.jobs) setProcessingJobs(data.jobs); }).catch(() => undefined); return () => { active = false; }; }, []);
 
   function acceptFiles(incoming: FileList | null) {
     if (!incoming) return;
@@ -75,7 +82,22 @@ export function LibraryWorkspace() {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error ?? "The source index could not be saved.");
-    return data.extraction as StudyDocument["extraction"];
+    return data as { extraction: StudyDocument["extraction"]; processingJob: ProcessingJob };
+  }
+
+  async function processFastIndex(documentId: string) {
+    setIndexStates((current) => ({ ...current, [documentId]: "Building the fast term index in small batches…" }));
+    try {
+      for (let batch = 0; batch < 12; batch += 1) {
+        const response = await fetch("/api/source-processing", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ documentId }) });
+        const data = await response.json(); if (!response.ok) throw new Error(data.error ?? "Fast indexing paused.");
+        const job = data.job as ProcessingJob; const percentage = job.totalPages ? Math.round((job.processedPages / job.totalPages) * 100) : 100;
+        setIndexStates((current) => ({ ...current, [documentId]: data.complete ? "Fast incremental index ready" : `Fast index ${percentage}% · upload remains usable` }));
+        if (data.complete) break;
+        await new Promise((resolve) => window.setTimeout(resolve, 60));
+      }
+      await loadProcessingJobs();
+    } catch (error) { setIndexStates((current) => ({ ...current, [documentId]: error instanceof Error ? error.message : "Fast indexing paused." })); await loadProcessingJobs(); }
   }
 
   async function upload(event: FormEvent<HTMLFormElement>) {
@@ -107,8 +129,9 @@ export function LibraryWorkspace() {
             const extraction = await extractSourceFile(file, (progress) => setFileProgress((current) => ({ ...current, [key]: progress })));
             setFileStates((current) => ({ ...current, [key]: "indexing" }));
             const saved = await saveExtraction(document.id, extraction);
-            extractionStatus = saved?.status ?? extraction.status;
+            extractionStatus = saved.extraction?.status ?? extraction.status;
             setFileStates((current) => ({ ...current, [key]: extractionStatus === "ready" ? "ready" : extractionStatus === "partial" ? "partial" : "needs_ocr" }));
+            void processFastIndex(document.id);
           } catch (error) {
             extractionWarning = error instanceof Error ? error.message : "The deep index needs attention.";
             setFileStates((current) => ({ ...current, [key]: "needs_ocr" }));
@@ -142,7 +165,8 @@ export function LibraryWorkspace() {
       const extraction = await extractSourceFile(file, (progress) => setIndexStates((current) => ({ ...current, [document.id]: progress })));
       setIndexStates((current) => ({ ...current, [document.id]: "Saving the private search index…" }));
       const saved = await saveExtraction(document.id, extraction);
-      setIndexStates((current) => ({ ...current, [document.id]: saved?.status === "ready" ? "Deep index ready" : saved?.status === "partial" ? "Partial index saved" : "OCR still needed" }));
+      setIndexStates((current) => ({ ...current, [document.id]: saved.extraction?.status === "ready" ? "Deep index ready · building fast terms…" : saved.extraction?.status === "partial" ? "Partial index saved · building fast terms…" : "OCR still needed" }));
+      void processFastIndex(document.id);
       await loadDocuments();
     } catch (error) { setIndexStates((current) => ({ ...current, [document.id]: error instanceof Error ? error.message : "Indexing failed." })); }
   }
@@ -190,6 +214,8 @@ export function LibraryWorkspace() {
           <a className="source-map-link" href="/alignment">Review the chapter map <span>→</span></a>
         </aside>
       </section>
+
+      <section className="processing-dock" id="processing" aria-labelledby="processing-title"><header className="section-header"><div><span className="eyebrow">Recommendation 40 · High-speed pipeline</span><h2 id="processing-title">Incremental source processing</h2></div><button type="button" disabled={!processingJobs.some((job) => job.status !== "ready")} onClick={() => processingJobs.filter((job) => job.status !== "ready").forEach((job) => void processFastIndex(job.documentId))}>Continue queued work</button></header><p>Original sections become usable first. A compact term index then builds in eight-page batches, and common approved-source searches are cached for ten minutes.</p><div>{processingJobs.length ? processingJobs.slice(0, 8).map((job) => { const percentage = job.totalPages ? Math.round((job.processedPages / job.totalPages) * 100) : 100; return <article key={job.id}><span>{job.status === "ready" ? "✓" : "↻"}</span><div><strong>{job.filename}</strong><small>{job.subject} · {job.processedPages}/{job.totalPages} pages</small><i><b style={{ width: `${percentage}%` }} /></i></div><button type="button" disabled={job.status === "ready"} onClick={() => void processFastIndex(job.documentId)}>{job.status === "ready" ? "Ready" : "Process"}</button></article>; }) : <aside><strong>No fast-index jobs yet.</strong><p>Upload and deep-index a Book section to create the first durable background job.</p></aside>}</div></section>
 
       <section className="document-library" aria-labelledby="saved-sources-title">
         <header className="section-header"><div><span className="eyebrow">Saved by semester</span><h2 id="saved-sources-title">Your sources</h2></div><span>{documents.length ? "Open any original source" : "Your uploaded sources will appear here"}</span></header>

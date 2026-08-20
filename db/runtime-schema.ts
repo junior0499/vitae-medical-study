@@ -8,6 +8,10 @@ function getD1() {
   return database;
 }
 
+export function getStudyDatabase() {
+  return getD1();
+}
+
 export function ensureVitaeSchema() {
   if (schemaPromise) return schemaPromise;
   const database = getD1();
@@ -356,6 +360,73 @@ export function ensureVitaeSchema() {
       ON learning_versions(owner_id, created_at)`),
     database.prepare(`CREATE INDEX IF NOT EXISTS idx_learning_versions_owner_entity_created
       ON learning_versions(owner_id, entity_type, entity_key, created_at)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS learning_evidence_links (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_key TEXT NOT NULL,
+      link_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_learning_evidence_owner_entity_target
+      ON learning_evidence_links(owner_id, entity_type, entity_key, link_type, target_id)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_learning_evidence_owner_entity
+      ON learning_evidence_links(owner_id, entity_type, entity_key)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_learning_evidence_owner_target
+      ON learning_evidence_links(owner_id, link_type, target_id)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS backup_restore_audits (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      archive_digest TEXT NOT NULL,
+      selected_groups_json TEXT NOT NULL,
+      inserted_count INTEGER DEFAULT 0 NOT NULL,
+      skipped_count INTEGER DEFAULT 0 NOT NULL,
+      created_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_backup_restore_owner_created
+      ON backup_restore_audits(owner_id, created_at)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS source_processing_jobs (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      document_id TEXT NOT NULL,
+      status TEXT DEFAULT 'queued' NOT NULL,
+      total_pages INTEGER DEFAULT 0 NOT NULL,
+      processed_pages INTEGER DEFAULT 0 NOT NULL,
+      cursor_page INTEGER DEFAULT 0 NOT NULL,
+      warning TEXT DEFAULT '' NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_source_processing_owner_document
+      ON source_processing_jobs(owner_id, document_id)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_source_processing_owner_status_updated
+      ON source_processing_jobs(owner_id, status, updated_at)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS source_search_terms (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      document_id TEXT NOT NULL,
+      page_number INTEGER NOT NULL,
+      term TEXT NOT NULL,
+      frequency INTEGER DEFAULT 1 NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_source_terms_owner_document_page_term
+      ON source_search_terms(owner_id, document_id, page_number, term)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_source_terms_owner_term_document
+      ON source_search_terms(owner_id, term, document_id)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS source_search_cache (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      query_key TEXT NOT NULL,
+      scope_hash TEXT NOT NULL,
+      result_json TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_source_cache_owner_query_scope
+      ON source_search_cache(owner_id, query_key, scope_hash)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_source_cache_owner_expires
+      ON source_search_cache(owner_id, expires_at)`),
     database.prepare("PRAGMA optimize"),
   ]).then(() => undefined).catch((error) => {
     schemaPromise = null;

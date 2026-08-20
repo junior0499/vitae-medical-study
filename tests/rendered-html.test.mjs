@@ -125,8 +125,8 @@ test("renders the connected curriculum, adaptive engine, application tools, trav
   assert.match(routesHtml, /Subject-specific sequence/);
   assert.match(mapsHtml, /Your thinking/);
   assert.match(mapsHtml, /Saved sideways maps/);
-  assert.match(offlineHtml, /Carry the lesson/);
-  assert.match(offlineHtml, /Save core learning pack/);
+  assert.match(offlineHtml, /Carry only the block/);
+  assert.match(offlineHtml, /Save selected pack/);
   assert.match(diagnosticHtml, /Start where your/);
   assert.match(diagnosticHtml, /75%/);
   assert.match(graphHtml, /Every activity has/);
@@ -206,7 +206,7 @@ test("declares durable learning, adaptive application, correction, map, review, 
   assert.match(mindMapRouteText, /nodesJson/);
   assert.match(masteryRouteText, /calculateMastery/);
   assert.match(serviceWorkerText, /CACHE_TRAVEL_PACK/);
-  assert.match(serviceWorkerText, /learning-graph/);
+  assert.match(serviceWorkerText, /poh-tah-toh-travel-v8/);
   assert.match(manifestText, /Poh-tah-toh Medical Study Companion/);
   assert.match(manifestText, /cat-icon-512\.png/);
   assert.match(lessonSourceRegistryText, /foundation-03/);
@@ -270,9 +270,9 @@ test("renders approved-source search, recoverable history, and private backup", 
   assert.match(toolsHtml, /Smart source search/);
   assert.match(searchHtml, /Search the approved shelf/);
   assert.match(searchHtml, /approved syllabus mapping/);
-  assert.match(historyHtml, /Return to an earlier idea/);
+  assert.match(historyHtml, /See what changed/);
   assert.match(historyHtml, /safety copy/);
-  assert.match(backupHtml, /One private archive/);
+  assert.match(backupHtml, /Restore selectively/);
   assert.match(backupHtml, /Internal identity removed/);
 
   const [migration, runtimeSchema, sourceApi, historyApi, backupApi, learningHistory, masteryCalculation, serviceWorker] = await Promise.all([
@@ -297,8 +297,8 @@ test("renders approved-source search, recoverable history, and private backup", 
   assert.match(backupApi, /delete safe\.objectKey/);
   assert.match(backupApi, /content-disposition/);
   assert.match(masteryCalculation, /assessmentComponent/);
-  assert.match(serviceWorker, /poh-tah-toh-travel-v7/);
-  assert.match(serviceWorker, /source-search/);
+  assert.match(serviceWorker, /poh-tah-toh-travel-v8/);
+  assert.match(serviceWorker, /CACHE_TRAVEL_PACK/);
 });
 
 test("renders deep source extraction, linked reading, and citation-first Professor Mode", async () => {
@@ -377,7 +377,7 @@ test("renders objective evidence, a daily queue, adaptive spacing, and reviewed 
   assert.match(questionsHtml, /exact passage/);
   assert.match(questionsHtml, /Human review gate/);
 
-  const [migration, schema, runtimeSchema, coverageApi, dailyApi, reviewApi, spacing, questionApi, backupApi, serviceWorker] = await Promise.all([
+  const [migration, schema, runtimeSchema, coverageApi, dailyApi, reviewApi, spacing, questionApi, backupApi, offlinePacks] = await Promise.all([
     readFile(new URL("../drizzle/0007_ambiguous_chimera.sql", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/runtime-schema.ts", import.meta.url), "utf8"),
@@ -387,7 +387,7 @@ test("renders objective evidence, a daily queue, adaptive spacing, and reviewed 
     readFile(new URL("../lib/adaptive-spacing.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/generated-questions/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/backup/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
+    readFile(new URL("../lib/offline-packs.ts", import.meta.url), "utf8"),
   ]);
   assert.match(migration, /CREATE TABLE `daily_queue_actions`/);
   assert.match(migration, /CREATE TABLE `recall_review_signals`/);
@@ -408,8 +408,8 @@ test("renders objective evidence, a daily queue, adaptive spacing, and reviewed 
   assert.match(backupApi, /recallReviewSignals/);
   assert.match(backupApi, /dailyQueueActions/);
   assert.match(backupApi, /generatedQuestions/);
-  assert.match(serviceWorker, /question-studio/);
-  assert.match(serviceWorker, /\/today/);
+  assert.match(offlinePacks, /question-studio/);
+  assert.match(offlinePacks, /\/today/);
 });
 
 test("renders source-cited reasoning, misconception repair, and approved cross-book comparison", async () => {
@@ -433,7 +433,7 @@ test("renders source-cited reasoning, misconception repair, and approved cross-b
   assert.match(compareHtml, /Compare the passages/);
   assert.match(compareHtml, /Two approved books/);
 
-  const [migration, schema, runtimeSchema, reasoningApi, misconceptionsApi, comparisonApi, reasoningLibrary, dailyApi, backupApi, serviceWorker] = await Promise.all([
+  const [migration, schema, runtimeSchema, reasoningApi, misconceptionsApi, comparisonApi, reasoningLibrary, dailyApi, backupApi, offlinePacks] = await Promise.all([
     readFile(new URL("../drizzle/0008_absent_randall_flagg.sql", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/runtime-schema.ts", import.meta.url), "utf8"),
@@ -443,7 +443,7 @@ test("renders source-cited reasoning, misconception repair, and approved cross-b
     readFile(new URL("../lib/source-reasoning.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/daily-queue/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/backup/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
+    readFile(new URL("../lib/offline-packs.ts", import.meta.url), "utf8"),
   ]);
   assert.match(migration, /CREATE TABLE `clinical_reasoning_progress`/);
   assert.match(migration, /CREATE TABLE `misconception_repairs`/);
@@ -466,9 +466,56 @@ test("renders source-cited reasoning, misconception repair, and approved cross-b
   assert.match(dailyApi, /misconception-/);
   assert.match(dailyApi, /reasoning-/);
   assert.match(backupApi, /objectiveSourceLinks|clinicalReasoningProgress|misconceptionRepairs/);
-  assert.match(serviceWorker, /reasoning-ladder/);
-  assert.match(serviceWorker, /misconceptions/);
-  assert.match(serviceWorker, /source-compare/);
+  assert.match(offlinePacks, /reasoning-ladder/);
+  assert.match(offlinePacks, /misconceptions/);
+  assert.match(offlinePacks, /source-compare/);
+});
+
+test("renders connected notes, visual comparisons, selective restoration, custom packs, and fast processing", async () => {
+  const [toolsResponse, notesResponse, historyResponse, backupResponse, offlineResponse, libraryResponse] = await Promise.all([
+    render("/study-tools"), render("/note-workspace"), render("/history"), render("/backup"), render("/offline"), render("/library"),
+  ]);
+  for (const response of [toolsResponse, notesResponse, historyResponse, backupResponse, offlineResponse, libraryResponse]) assert.equal(response.status, 200);
+  const [toolsHtml, notesHtml, historyHtml, backupHtml, offlineHtml, libraryHtml] = await Promise.all([
+    toolsResponse.text(), notesResponse.text(), historyResponse.text(), backupResponse.text(), offlineResponse.text(), libraryResponse.text(),
+  ]);
+  assert.match(toolsHtml, /Connected note workspace/);
+  assert.match(toolsHtml, /High-speed processing/);
+  assert.match(notesHtml, /Every idea keeps/);
+  assert.match(notesHtml, /Traceability remains strict/);
+  assert.match(historyHtml, /Visual version comparison/);
+  assert.match(backupHtml, /Preview before restoration/);
+  assert.match(offlineHtml, /Subjects, systems &amp; exam blocks/);
+  assert.match(libraryHtml, /Incremental source processing/);
+
+  const [migration, schema, runtimeSchema, connectedApi, historyApi, restoreApi, offlinePacks, processingApi, searchApi, extractionApi] = await Promise.all([
+    readFile(new URL("../drizzle/0009_premium_tinkerer.sql", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/runtime-schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/connected-notes/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/history/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/backup/restore/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/offline-packs.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/source-processing/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/source-search/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/document-extractions/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(migration, /CREATE TABLE `learning_evidence_links`/);
+  assert.match(migration, /CREATE TABLE `backup_restore_audits`/);
+  assert.match(migration, /CREATE TABLE `source_processing_jobs`/);
+  assert.match(migration, /CREATE TABLE `source_search_terms`/);
+  assert.match(migration, /CREATE TABLE `source_search_cache`/);
+  assert.match(schema, /learningEvidenceLinks|backupRestoreAudits|sourceProcessingJobs|sourceSearchTerms|sourceSearchCache/);
+  assert.match(runtimeSchema, /CREATE TABLE IF NOT EXISTS learning_evidence_links/);
+  assert.match(connectedApi, /row\?\.status === "approved"/);
+  assert.match(historyApi, /Compare two versions and choose one from that preview before restoring/);
+  assert.match(restoreApi, /INSERT OR IGNORE/);
+  assert.match(restoreApi, /backup changed after preview/i);
+  assert.match(offlinePacks, /kind: "subject"|kind: "system"|kind: "exam"/);
+  assert.match(processingApi, /limit\(8\)/);
+  assert.match(searchApi, /source_search_terms/);
+  assert.match(searchApi, /performance: \{ cache: "hit"/);
+  assert.match(extractionApi, /sourceProcessingJobs/);
 });
 
 test("removes the disposable starter and includes production brand metadata", async () => {

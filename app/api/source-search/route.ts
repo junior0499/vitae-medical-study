@@ -1,7 +1,7 @@
-import { and, eq, inArray, like, or } from "drizzle-orm";
+import { and, eq, gt, inArray, like, lt, or } from "drizzle-orm";
 import { getDb } from "@/db";
-import { alignmentReviews, documentExtractions, documentSourceDetails, documentTextChunks, lessonDrafts, studyDocuments } from "@/db/schema";
-import { ensureVitaeSchema } from "@/db/runtime-schema";
+import { alignmentReviews, documentExtractions, documentSourceDetails, documentTextChunks, lessonDrafts, sourceSearchCache, studyDocuments } from "@/db/schema";
+import { ensureVitaeSchema, getStudyDatabase } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 import { findCoverageObjective } from "@/lib/subject-alignments";
 
@@ -16,6 +16,11 @@ function contentSnippet(content: string, query: string) {
   const start = Math.max(0, index - 95);
   const end = Math.min(normalizedContent.length, index + query.length + 165);
   return `${start ? "…" : ""}${normalizedContent.slice(start, end)}${end < normalizedContent.length ? "…" : ""}`;
+}
+
+async function digest(value: string) {
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(hash)).slice(0, 12).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export async function GET(request: Request) {
@@ -35,10 +40,16 @@ export async function GET(request: Request) {
     const documentMap = new Map(documents.filter((document) => document.category === "Book section").map((document) => [document.id, document]));
     const linkedDocuments = approvedDocumentIds.map((id) => documentMap.get(id)).filter((document): document is NonNullable<typeof document> => Boolean(document));
     const linkedIds = linkedDocuments.map((document) => document.id);
-    const [details, extractions] = linkedIds.length ? await Promise.all([
-      getDb().select().from(documentSourceDetails).where(and(eq(documentSourceDetails.ownerId, ownerId), inArray(documentSourceDetails.documentId, linkedIds))),
-      getDb().select().from(documentExtractions).where(and(eq(documentExtractions.ownerId, ownerId), inArray(documentExtractions.documentId, linkedIds))),
-    ]) : [[], []];
+    const details: Array<typeof documentSourceDetails.$inferSelect> = [];
+    const extractions: Array<typeof documentExtractions.$inferSelect> = [];
+    for (let offset = 0; offset < linkedIds.length; offset += 60) {
+      const documentBatch = linkedIds.slice(offset, offset + 60);
+      const [detailBatch, extractionBatch] = await Promise.all([
+        getDb().select().from(documentSourceDetails).where(and(eq(documentSourceDetails.ownerId, ownerId), inArray(documentSourceDetails.documentId, documentBatch))),
+        getDb().select().from(documentExtractions).where(and(eq(documentExtractions.ownerId, ownerId), inArray(documentExtractions.documentId, documentBatch))),
+      ]);
+      details.push(...detailBatch); extractions.push(...extractionBatch);
+    }
     const detailsMap = new Map(details.map((detail) => [detail.documentId, detail]));
     const extractionMap = new Map(extractions.map((extraction) => [extraction.documentId, extraction]));
     const routeMap = new Map<string, Array<{ alignmentId: string; objective: string; system: string; lessonSlug: string }>>();
@@ -51,11 +62,33 @@ export async function GET(request: Request) {
 
     const normalizedQuery = normalize(query);
     const tokens = normalizedQuery.split(" ").filter((token) => token.length > 1).slice(0, 8);
-    const chunks = linkedIds.length && tokens.length ? await getDb().select().from(documentTextChunks).where(and(
-      eq(documentTextChunks.ownerId, ownerId),
-      inArray(documentTextChunks.documentId, linkedIds),
-      or(...tokens.map((token) => like(documentTextChunks.textContent, `%${token}%`))),
-    )).limit(160) : [];
+    const nowIso = new Date().toISOString();
+    await getDb().delete(sourceSearchCache).where(and(eq(sourceSearchCache.ownerId, ownerId), lt(sourceSearchCache.expiresAt, nowIso)));
+    const scopeHash = await digest(JSON.stringify({ linkedIds: [...linkedIds].sort(), reviews: reviews.filter((review) => approved.has(review.alignmentId)).map((review) => [review.alignmentId, review.updatedAt]).sort(), drafts: approvedDrafts.map((draft) => [draft.id, draft.updatedAt]).sort(), extractions: extractions.map((extraction) => [extraction.documentId, extraction.updatedAt]).sort() }));
+    if (normalizedQuery) {
+      const [cached] = await getDb().select().from(sourceSearchCache).where(and(eq(sourceSearchCache.ownerId, ownerId), eq(sourceSearchCache.queryKey, normalizedQuery), eq(sourceSearchCache.scopeHash, scopeHash), gt(sourceSearchCache.expiresAt, nowIso))).limit(1);
+      if (cached) {
+        try { const payload = JSON.parse(cached.resultJson) as Record<string, unknown>; return Response.json({ ...payload, performance: { cache: "hit", incrementalIndex: true } }); } catch { /* Rebuild an unreadable cache row. */ }
+      }
+    }
+    type ChunkRow = { id: string; ownerId: string; documentId: string; pageNumber: number; printedPage: string; textContent: string; method: string; createdAt: string };
+    let chunks: ChunkRow[] = [];
+    if (linkedIds.length && tokens.length) {
+      const indexedChunks = new Map<string, ChunkRow>();
+      for (let offset = 0; offset < linkedIds.length && indexedChunks.size < 160; offset += 60) {
+        const documentBatch = linkedIds.slice(offset, offset + 60); const documentSlots = documentBatch.map(() => "?").join(", "); const termSlots = tokens.map(() => "?").join(", ");
+        const indexed = await getStudyDatabase().prepare(`SELECT c.id, c.owner_id AS ownerId, c.document_id AS documentId, c.page_number AS pageNumber, c.printed_page AS printedPage, c.text_content AS textContent, c.method, c.created_at AS createdAt FROM document_text_chunks c INNER JOIN source_search_terms t ON t.owner_id = c.owner_id AND t.document_id = c.document_id AND t.page_number = c.page_number WHERE t.owner_id = ? AND t.document_id IN (${documentSlots}) AND t.term IN (${termSlots}) GROUP BY c.id ORDER BY SUM(t.frequency) DESC LIMIT 160`).bind(ownerId, ...documentBatch, ...tokens).all<ChunkRow>();
+        indexed.results.forEach((chunk) => indexedChunks.set(chunk.id, chunk));
+      }
+      chunks = Array.from(indexedChunks.values()).slice(0, 160);
+      if (!chunks.length) {
+        for (let offset = 0; offset < linkedIds.length && chunks.length < 160; offset += 60) {
+          const documentBatch = linkedIds.slice(offset, offset + 60);
+          const batch = await getDb().select().from(documentTextChunks).where(and(eq(documentTextChunks.ownerId, ownerId), inArray(documentTextChunks.documentId, documentBatch), or(...tokens.map((token) => like(documentTextChunks.textContent, `%${token}%`))))).limit(160 - chunks.length);
+          chunks.push(...batch);
+        }
+      }
+    }
     const chunksByDocument = new Map<string, typeof chunks>();
     for (const chunk of chunks) chunksByDocument.set(chunk.documentId, [...(chunksByDocument.get(chunk.documentId) ?? []), chunk]);
 
@@ -97,11 +130,17 @@ export async function GET(request: Request) {
     }).filter((result) => !tokens.length || result.score > 0).sort((a, b) => b.score - a.score || a.bookTitle.localeCompare(b.bookTitle));
 
     const indexed = linkedDocuments.filter((document) => (extractionMap.get(document.id)?.searchablePages ?? 0) > 0);
-    return Response.json({
+    const payload = {
       query,
       results: results.slice(0, 40),
       summary: { approvedMappings: approved.size, approvedBookSections: linkedDocuments.length, contentSearchable: indexed.length, indexedPages: indexed.reduce((sum, document) => sum + (extractionMap.get(document.id)?.searchablePages ?? 0), 0) },
       scope: "Only owner-held Book sections still linked to an approved syllabus mapping are searchable. Extracted text and OCR stay private.",
-    });
+      performance: { cache: "miss", incrementalIndex: true },
+    };
+    if (normalizedQuery) {
+      const now = new Date(); const expiresAt = new Date(now.getTime() + 10 * 60 * 1000).toISOString();
+      await getDb().insert(sourceSearchCache).values({ id: crypto.randomUUID(), ownerId, queryKey: normalizedQuery, scopeHash, resultJson: JSON.stringify(payload), expiresAt, createdAt: now.toISOString() }).onConflictDoUpdate({ target: [sourceSearchCache.ownerId, sourceSearchCache.queryKey, sourceSearchCache.scopeHash], set: { resultJson: JSON.stringify(payload), expiresAt, createdAt: now.toISOString() } });
+    }
+    return Response.json(payload);
   } catch { return Response.json({ error: "Approved-source search could not be completed." }, { status: 500 }); }
 }

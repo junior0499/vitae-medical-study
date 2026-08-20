@@ -346,3 +346,70 @@ export const learningVersions = sqliteTable("learning_versions", {
   index("idx_learning_versions_owner_created").on(table.ownerId, table.createdAt),
   index("idx_learning_versions_owner_entity_created").on(table.ownerId, table.entityType, table.entityKey, table.createdAt),
 ]);
+
+export const learningEvidenceLinks = sqliteTable("learning_evidence_links", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityKey: text("entity_key").notNull(),
+  linkType: text("link_type").notNull(),
+  targetId: text("target_id").notNull(),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_learning_evidence_owner_entity_target").on(table.ownerId, table.entityType, table.entityKey, table.linkType, table.targetId),
+  index("idx_learning_evidence_owner_entity").on(table.ownerId, table.entityType, table.entityKey),
+  index("idx_learning_evidence_owner_target").on(table.ownerId, table.linkType, table.targetId),
+]);
+
+export const backupRestoreAudits = sqliteTable("backup_restore_audits", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  archiveDigest: text("archive_digest").notNull(),
+  selectedGroupsJson: text("selected_groups_json").notNull(),
+  insertedCount: integer("inserted_count").notNull().default(0),
+  skippedCount: integer("skipped_count").notNull().default(0),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("idx_backup_restore_owner_created").on(table.ownerId, table.createdAt),
+]);
+
+export const sourceProcessingJobs = sqliteTable("source_processing_jobs", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  documentId: text("document_id").notNull(),
+  status: text("status").notNull().default("queued"),
+  totalPages: integer("total_pages").notNull().default(0),
+  processedPages: integer("processed_pages").notNull().default(0),
+  cursorPage: integer("cursor_page").notNull().default(0),
+  warning: text("warning").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_source_processing_owner_document").on(table.ownerId, table.documentId),
+  index("idx_source_processing_owner_status_updated").on(table.ownerId, table.status, table.updatedAt),
+]);
+
+export const sourceSearchTerms = sqliteTable("source_search_terms", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  documentId: text("document_id").notNull(),
+  pageNumber: integer("page_number").notNull(),
+  term: text("term").notNull(),
+  frequency: integer("frequency").notNull().default(1),
+}, (table) => [
+  uniqueIndex("idx_source_terms_owner_document_page_term").on(table.ownerId, table.documentId, table.pageNumber, table.term),
+  index("idx_source_terms_owner_term_document").on(table.ownerId, table.term, table.documentId),
+]);
+
+export const sourceSearchCache = sqliteTable("source_search_cache", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  queryKey: text("query_key").notNull(),
+  scopeHash: text("scope_hash").notNull(),
+  resultJson: text("result_json").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_source_cache_owner_query_scope").on(table.ownerId, table.queryKey, table.scopeHash),
+  index("idx_source_cache_owner_expires").on(table.ownerId, table.expiresAt),
+]);

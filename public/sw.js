@@ -1,5 +1,5 @@
-const CACHE_NAME = "poh-tah-toh-travel-v7";
-const APP_SHELL = ["/", "/learn", "/today", "/routes", "/learning-graph", "/diagnostic", "/cases", "/reasoning-ladder", "/misconceptions", "/source-compare", "/visual-lab", "/practice", "/question-studio", "/viva", "/comparisons", "/interleaved", "/confidence", "/exam-blueprint", "/assessment", "/review", "/mistakes", "/maps", "/offline", "/study-tools", "/source-search", "/history", "/backup"];
+const CACHE_NAME = "poh-tah-toh-travel-v8";
+const APP_SHELL = ["/", "/offline", "/study-tools"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => Promise.allSettled(APP_SHELL.map((url) => cache.add(url)))).then(() => self.skipWaiting()));
@@ -11,8 +11,13 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type !== "CACHE_TRAVEL_PACK" || !Array.isArray(event.data.urls)) return;
-  const urls = event.data.urls.filter((url) => typeof url === "string" && url.startsWith("/"));
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => Promise.allSettled(urls.map((url) => cache.add(url)))));
+  const urls = Array.from(new Set([...APP_SHELL, ...event.data.urls.filter((url) => typeof url === "string" && url.startsWith("/") && !url.startsWith("/api/"))])).slice(0, 80);
+  event.waitUntil(caches.open(CACHE_NAME).then(async (cache) => {
+    const old = await cache.keys(); await Promise.all(old.map((request) => cache.delete(request)));
+    const results = await Promise.allSettled(urls.map((url) => cache.add(url)));
+    const cached = results.filter((result) => result.status === "fulfilled").length;
+    event.ports?.[0]?.postMessage({ ok: true, cached, failed: results.length - cached });
+  }).catch((error) => event.ports?.[0]?.postMessage({ ok: false, error: error instanceof Error ? error.message : "Offline saving failed." })));
 });
 
 self.addEventListener("fetch", (event) => {

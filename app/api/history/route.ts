@@ -11,6 +11,31 @@ function parsePayload(value: string) {
   try { return JSON.parse(value) as Record<string, unknown>; } catch { return null; }
 }
 
+function expandedPayload(payload: Record<string, unknown>) {
+  const expanded = { ...payload };
+  for (const key of ["nodesJson", "outlineJson"]) {
+    if (typeof expanded[key] === "string") {
+      try { expanded[key.replace("Json", "")] = JSON.parse(expanded[key] as string); delete expanded[key]; } catch { /* Keep unreadable legacy JSON visible as text. */ }
+    }
+  }
+  return expanded;
+}
+
+function flatten(value: unknown, path = "", result: Record<string, string> = {}) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => flatten(item, `${path}[${index}]`, result));
+  } else if (value && typeof value === "object") {
+    Object.entries(value as Record<string, unknown>).forEach(([key, item]) => flatten(item, path ? `${path}.${key}` : key, result));
+  } else result[path || "value"] = value == null ? "" : String(value);
+  return result;
+}
+
+function comparison(left: Record<string, unknown>, right: Record<string, unknown>) {
+  const leftFields = flatten(expandedPayload(left));
+  const rightFields = flatten(expandedPayload(right));
+  return Array.from(new Set([...Object.keys(leftFields), ...Object.keys(rightFields)])).sort().flatMap((field) => leftFields[field] === rightFields[field] ? [] : [{ field, before: leftFields[field] ?? "—", after: rightFields[field] ?? "—" }]).slice(0, 500);
+}
+
 export async function GET(request: Request) {
   const ownerId = getCurrentOwnerId(request);
   if (!ownerId) return unauthorizedResponse();
@@ -19,6 +44,25 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const requestedType = url.searchParams.get("type")?.trim() ?? "";
     const requestedKey = url.searchParams.get("key")?.trim() ?? "";
+    const leftId = url.searchParams.get("left")?.trim() ?? "";
+    const rightId = url.searchParams.get("right")?.trim() ?? "";
+    if (leftId || rightId) {
+      if (!leftId || !rightId || leftId === rightId) return Response.json({ error: "Choose two different versions to compare." }, { status: 400 });
+      const [left, right] = await Promise.all([
+        getDb().select().from(learningVersions).where(and(eq(learningVersions.ownerId, ownerId), eq(learningVersions.id, leftId))).limit(1).then((rows) => rows[0]),
+        getDb().select().from(learningVersions).where(and(eq(learningVersions.ownerId, ownerId), eq(learningVersions.id, rightId))).limit(1).then((rows) => rows[0]),
+      ]);
+      if (!left || !right) return Response.json({ error: "One of those private versions could not be found." }, { status: 404 });
+      if (left.entityType !== right.entityType || left.entityKey !== right.entityKey) return Response.json({ error: "Compare versions of the same note, map, mapping, or lesson." }, { status: 409 });
+      const leftPayload = parsePayload(left.payloadJson); const rightPayload = parsePayload(right.payloadJson);
+      if (!leftPayload || !rightPayload) return Response.json({ error: "One of those versions is no longer readable." }, { status: 422 });
+      return Response.json({
+        left: { id: left.id, entityType: left.entityType, entityKey: left.entityKey, action: left.action, summary: left.summary, createdAt: left.createdAt },
+        right: { id: right.id, entityType: right.entityType, entityKey: right.entityKey, action: right.action, summary: right.summary, createdAt: right.createdAt },
+        changes: comparison(leftPayload, rightPayload),
+        confirmationKey: `${left.entityType}:${left.entityKey}`,
+      });
+    }
     const rows = await getDb().select().from(learningVersions).where(eq(learningVersions.ownerId, ownerId)).orderBy(desc(learningVersions.createdAt)).limit(250);
     const filtered = rows.filter((row) => (!requestedType || row.entityType === requestedType) && (!requestedKey || row.entityKey === requestedKey));
     const counts = Object.fromEntries([...entityTypes].map((type) => [type, rows.filter((row) => row.entityType === type).length]));
@@ -34,12 +78,19 @@ export async function POST(request: Request) {
   const ownerId = getCurrentOwnerId(request);
   if (!ownerId) return unauthorizedResponse();
   try {
-    const body = await request.json() as { versionId?: string };
+    const body = await request.json() as { versionId?: string; comparisonLeftId?: string; comparisonRightId?: string; confirmationKey?: string };
     const versionId = body.versionId?.trim() ?? "";
-    if (!versionId) return Response.json({ error: "Choose a version to restore." }, { status: 400 });
+    const comparisonLeftId = body.comparisonLeftId?.trim() ?? "";
+    const comparisonRightId = body.comparisonRightId?.trim() ?? "";
+    if (!versionId || !comparisonLeftId || !comparisonRightId || comparisonLeftId === comparisonRightId || ![comparisonLeftId, comparisonRightId].includes(versionId)) return Response.json({ error: "Compare two versions and choose one from that preview before restoring." }, { status: 400 });
     await ensureVitaeSchema();
-    const [version] = await getDb().select().from(learningVersions).where(and(eq(learningVersions.ownerId, ownerId), eq(learningVersions.id, versionId))).limit(1);
+    const [version, comparisonLeft, comparisonRight] = await Promise.all([
+      getDb().select().from(learningVersions).where(and(eq(learningVersions.ownerId, ownerId), eq(learningVersions.id, versionId))).limit(1).then((rows) => rows[0]),
+      getDb().select().from(learningVersions).where(and(eq(learningVersions.ownerId, ownerId), eq(learningVersions.id, comparisonLeftId))).limit(1).then((rows) => rows[0]),
+      getDb().select().from(learningVersions).where(and(eq(learningVersions.ownerId, ownerId), eq(learningVersions.id, comparisonRightId))).limit(1).then((rows) => rows[0]),
+    ]);
     if (!version || !entityTypes.has(version.entityType as VersionedEntityType)) return Response.json({ error: "That private version could not be found." }, { status: 404 });
+    if (!comparisonLeft || !comparisonRight || comparisonLeft.entityType !== version.entityType || comparisonRight.entityType !== version.entityType || comparisonLeft.entityKey !== version.entityKey || comparisonRight.entityKey !== version.entityKey || body.confirmationKey !== `${version.entityType}:${version.entityKey}`) return Response.json({ error: "The comparison preview is stale. Compare the two versions again before restoring." }, { status: 409 });
     const payload = parsePayload(version.payloadJson);
     if (!payload) return Response.json({ error: "That version is no longer readable." }, { status: 422 });
     const now = new Date().toISOString();

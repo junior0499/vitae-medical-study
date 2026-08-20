@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { alignmentReviews, assessmentAttempts, clinicalReasoningProgress, dailyQueueActions, documentExtractions, documentSourceDetails, generatedQuestions, importedAlignments, learningActivityAttempts, learningVersions, lessonDrafts, lessonNotes, lessonProgress, misconceptionRepairs, mistakeNotebook, noteMindMaps, objectiveSourceLinks, recallReviews, recallReviewSignals, sourceCitations, studyDocuments } from "@/db/schema";
+import { alignmentReviews, assessmentAttempts, clinicalReasoningProgress, dailyQueueActions, documentExtractions, documentSourceDetails, generatedQuestions, importedAlignments, learningActivityAttempts, learningEvidenceLinks, learningVersions, lessonDrafts, lessonNotes, lessonProgress, misconceptionRepairs, mistakeNotebook, noteMindMaps, objectiveSourceLinks, recallReviews, recallReviewSignals, sourceCitations, studyDocuments } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 import { calculateMastery } from "@/lib/mastery-calculation";
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   if (!ownerId) return unauthorizedResponse();
   try {
     await ensureVitaeSchema();
-    const [progress, notes, documents, sourceDetails, extractions, citations, reviews, imported, drafts, recall, recallSignals, dailyActions, questions, supportLinks, reasoningProgress, repairs, assessments, mistakes, maps, activities, versions] = await Promise.all([
+    const [progress, notes, documents, sourceDetails, extractions, citations, reviews, imported, drafts, recall, recallSignals, dailyActions, questions, supportLinks, reasoningProgress, repairs, assessments, mistakes, maps, activities, versions, evidenceLinks] = await Promise.all([
       getDb().select().from(lessonProgress).where(eq(lessonProgress.ownerId, ownerId)),
       getDb().select().from(lessonNotes).where(eq(lessonNotes.ownerId, ownerId)),
       getDb().select().from(studyDocuments).where(eq(studyDocuments.ownerId, ownerId)),
@@ -41,6 +41,7 @@ export async function GET(request: Request) {
       getDb().select().from(noteMindMaps).where(eq(noteMindMaps.ownerId, ownerId)),
       getDb().select().from(learningActivityAttempts).where(eq(learningActivityAttempts.ownerId, ownerId)),
       getDb().select().from(learningVersions).where(eq(learningVersions.ownerId, ownerId)),
+      getDb().select().from(learningEvidenceLinks).where(eq(learningEvidenceLinks.ownerId, ownerId)),
     ]);
     const mastery = calculateMastery({ progress, notes, attempts: assessments, activities, reviews: recall, mistakes });
     const summary = {
@@ -62,6 +63,7 @@ export async function GET(request: Request) {
       mistakes: mistakes.length,
       mindMaps: maps.length,
       savedVersions: versions.length,
+      connectedNoteLinks: evidenceLinks.length,
       masteryScore: mastery.score,
     };
     if (new URL(request.url).searchParams.get("mode") === "summary") {
@@ -98,6 +100,7 @@ export async function GET(request: Request) {
         mistakeNotebook: sanitizeRows(mistakes),
         noteMindMaps: sanitizeRows(maps),
         learningVersions: sanitizeRows(versions),
+        learningEvidenceLinks: sanitizeRows(evidenceLinks),
       },
     };
     const date = generatedAt.slice(0, 10);
