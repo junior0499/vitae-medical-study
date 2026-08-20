@@ -219,6 +219,59 @@ export const generatedQuestions = sqliteTable("generated_questions", {
   index("idx_generated_questions_owner_status_updated").on(table.ownerId, table.status, table.updatedAt),
 ]);
 
+export const sourceLearningPacks = sqliteTable("source_learning_packs", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  objectiveId: text("objective_id").notNull(),
+  documentId: text("document_id").notNull(),
+  pageNumber: integer("page_number").notNull(),
+  printedPage: text("printed_page").notNull().default(""),
+  title: text("title").notNull(),
+  sourceLabel: text("source_label").notNull(),
+  sourceQuote: text("source_quote").notNull(),
+  artifactsJson: text("artifacts_json").notNull().default("{}"),
+  status: text("status").notNull().default("pending_review"),
+  reviewerNote: text("reviewer_note").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_source_packs_owner_objective_document_page").on(table.ownerId, table.objectiveId, table.documentId, table.pageNumber),
+  index("idx_source_packs_owner_status_updated").on(table.ownerId, table.status, table.updatedAt),
+]);
+
+export const illnessScripts = sqliteTable("illness_scripts", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  sourcePackId: text("source_pack_id").notNull(),
+  title: text("title").notNull(),
+  scriptJson: text("script_json").notNull().default("{}"),
+  status: text("status").notNull().default("pending_review"),
+  reviewerNote: text("reviewer_note").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_illness_scripts_owner_pack_title").on(table.ownerId, table.sourcePackId, table.title),
+  index("idx_illness_scripts_owner_status_updated").on(table.ownerId, table.status, table.updatedAt),
+]);
+
+export const diagnosticDrills = sqliteTable("diagnostic_drills", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  drillType: text("drill_type").notNull(),
+  title: text("title").notNull(),
+  illnessScriptIdsJson: text("illness_script_ids_json").notNull().default("[]"),
+  sourcePackIdsJson: text("source_pack_ids_json").notNull().default("[]"),
+  prompt: text("prompt").notNull(),
+  payloadJson: text("payload_json").notNull().default("{}"),
+  status: text("status").notNull().default("pending_review"),
+  reviewerNote: text("reviewer_note").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  index("idx_diagnostic_drills_owner_type_status").on(table.ownerId, table.drillType, table.status),
+  index("idx_diagnostic_drills_owner_updated").on(table.ownerId, table.updatedAt),
+]);
+
 export const objectiveSourceLinks = sqliteTable("objective_source_links", {
   id: text("id").primaryKey(),
   ownerId: text("owner_id").notNull(),

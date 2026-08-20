@@ -37,6 +37,8 @@ export function calculateMastery(input: {
       visualLabAttempts: input.activities.filter((item) => item.activityType === "visual_lab").length,
       vivaAttempts: input.activities.filter((item) => item.activityType === "oral_viva").length,
       voiceTeachBackAttempts: input.activities.filter((item) => item.activityType === "voice_teach_back").length,
+      diagnosticJustificationAttempts: input.activities.filter((item) => item.activityType === "diagnostic_justification").length,
+      counterfactualTransferAttempts: input.activities.filter((item) => item.activityType === "counterfactual_transfer").length,
       interleavedAttempts: input.activities.filter((item) => item.activityType === "interleaved_review").length,
       professorDialogueAttempts: input.activities.filter((item) => item.activityType === "professor_dialogue").length,
       cumulativeProgressTests: input.activities.filter((item) => item.activityType === "cumulative_progress_test").length,

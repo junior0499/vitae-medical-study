@@ -66,7 +66,7 @@ function confidenceOutcome(observations: Observation[]) {
 }
 
 function unfamiliarCaseOutcome(activities: Activity[]) {
-  const applicationTypes = new Set(["clinical_case", "clinical_encounter", "visual_lab"]);
+  const applicationTypes = new Set(["clinical_case", "clinical_encounter", "visual_lab", "diagnostic_justification", "counterfactual_transfer"]);
   const firstByActivity = new Map<string, Activity>();
   for (const activity of [...activities].sort((a, b) => a.completedAt.localeCompare(b.completedAt))) {
     if (!applicationTypes.has(activity.activityType)) continue;
@@ -76,7 +76,7 @@ function unfamiliarCaseOutcome(activities: Activity[]) {
   const firstAttempts = Array.from(firstByActivity.values());
   const answered = firstAttempts.reduce((sum, item) => sum + item.totalCount, 0);
   const correct = firstAttempts.reduce((sum, item) => sum + item.correctCount, 0);
-  return { activities: firstAttempts.length, answered, correct, rate: answered ? Math.round(correct / answered * 100) : null, method: "Only the first saved attempt for each case, encounter, or visual challenge is counted." };
+  return { activities: firstAttempts.length, answered, correct, rate: answered ? Math.round(correct / answered * 100) : null, method: "Only the first saved attempt for each case, encounter, visual challenge, diagnostic justification, or counterfactual transfer drill is counted." };
 }
 
 export function calculateLearningOutcomes(input: {

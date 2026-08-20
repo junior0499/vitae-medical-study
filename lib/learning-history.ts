@@ -1,10 +1,10 @@
 import { getDb } from "@/db";
 import { learningVersions } from "@/db/schema";
 
-export type VersionedEntityType = "note" | "mind_map" | "alignment_review" | "lesson_draft";
+export type VersionedEntityType = "note" | "mind_map" | "alignment_review" | "lesson_draft" | "source_pack" | "illness_script" | "diagnostic_drill";
 
 export function versionLabel(entityType: VersionedEntityType) {
-  return entityType === "note" ? "Lesson note" : entityType === "mind_map" ? "Sideways mind map" : entityType === "alignment_review" ? "Source mapping" : "Lesson draft";
+  return entityType === "note" ? "Lesson note" : entityType === "mind_map" ? "Sideways mind map" : entityType === "alignment_review" ? "Source mapping" : entityType === "source_pack" ? "Source learning pack" : entityType === "illness_script" ? "Illness script" : entityType === "diagnostic_drill" ? "Diagnostic drill" : "Lesson draft";
 }
 
 export async function recordLearningVersion(input: {

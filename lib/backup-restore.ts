@@ -23,7 +23,7 @@ export type SafeArchive = { format: string; schemaVersion: number; generatedAt?:
 export function validateArchive(value: unknown): SafeArchive {
   if (!value || typeof value !== "object") throw new Error("This is not a Poh-tah-toh backup.");
   const archive = value as Partial<SafeArchive>;
-  if (archive.format !== "poh-tah-toh-study-backup" || ![3, 4].includes(Number(archive.schemaVersion)) || !archive.data || typeof archive.data !== "object") throw new Error("Choose an unedited Poh-tah-toh schema version 3 or 4 backup.");
+  if (archive.format !== "poh-tah-toh-study-backup" || ![3, 4, 5].includes(Number(archive.schemaVersion)) || !archive.data || typeof archive.data !== "object") throw new Error("Choose an unedited Poh-tah-toh schema version 3, 4, or 5 backup.");
   const count = Object.values(archive.data).reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0);
   if (count > 2000) throw new Error("This backup is larger than the 2,000-record safe restoration limit.");
   return archive as SafeArchive;

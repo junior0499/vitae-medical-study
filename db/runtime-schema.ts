@@ -462,6 +462,59 @@ export function ensureVitaeSchema() {
       ON source_search_cache(owner_id, query_key, scope_hash)`),
     database.prepare(`CREATE INDEX IF NOT EXISTS idx_source_cache_owner_expires
       ON source_search_cache(owner_id, expires_at)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS source_learning_packs (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      objective_id TEXT NOT NULL,
+      document_id TEXT NOT NULL,
+      page_number INTEGER NOT NULL,
+      printed_page TEXT DEFAULT '' NOT NULL,
+      title TEXT NOT NULL,
+      source_label TEXT NOT NULL,
+      source_quote TEXT NOT NULL,
+      artifacts_json TEXT DEFAULT '{}' NOT NULL,
+      status TEXT DEFAULT 'pending_review' NOT NULL,
+      reviewer_note TEXT DEFAULT '' NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_source_packs_owner_objective_document_page
+      ON source_learning_packs(owner_id, objective_id, document_id, page_number)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_source_packs_owner_status_updated
+      ON source_learning_packs(owner_id, status, updated_at)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS illness_scripts (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      source_pack_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      script_json TEXT DEFAULT '{}' NOT NULL,
+      status TEXT DEFAULT 'pending_review' NOT NULL,
+      reviewer_note TEXT DEFAULT '' NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_illness_scripts_owner_pack_title
+      ON illness_scripts(owner_id, source_pack_id, title)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_illness_scripts_owner_status_updated
+      ON illness_scripts(owner_id, status, updated_at)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS diagnostic_drills (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      drill_type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      illness_script_ids_json TEXT DEFAULT '[]' NOT NULL,
+      source_pack_ids_json TEXT DEFAULT '[]' NOT NULL,
+      prompt TEXT NOT NULL,
+      payload_json TEXT DEFAULT '{}' NOT NULL,
+      status TEXT DEFAULT 'pending_review' NOT NULL,
+      reviewer_note TEXT DEFAULT '' NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_diagnostic_drills_owner_type_status
+      ON diagnostic_drills(owner_id, drill_type, status)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_diagnostic_drills_owner_updated
+      ON diagnostic_drills(owner_id, updated_at)`),
     database.prepare("PRAGMA optimize"),
   ]).then(() => undefined).catch((error) => {
     schemaPromise = null;

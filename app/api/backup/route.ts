@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { alignmentReviews, assessmentAttempts, clinicalReasoningProgress, dailyQueueActions, documentExtractions, documentSourceDetails, evidenceFreshnessReviews, generatedQuestions, importedAlignments, learningActivityAttempts, learningEvidenceLinks, learningVersions, lessonDrafts, lessonNotes, lessonProgress, misconceptionRepairs, mistakeNotebook, noteMindMaps, objectiveSourceLinks, questionQualityReviews, recallReviews, recallReviewSignals, sourceCitations, studyDocuments } from "@/db/schema";
+import { alignmentReviews, assessmentAttempts, clinicalReasoningProgress, dailyQueueActions, diagnosticDrills, documentExtractions, documentSourceDetails, evidenceFreshnessReviews, generatedQuestions, illnessScripts, importedAlignments, learningActivityAttempts, learningEvidenceLinks, learningVersions, lessonDrafts, lessonNotes, lessonProgress, misconceptionRepairs, mistakeNotebook, noteMindMaps, objectiveSourceLinks, questionQualityReviews, recallReviews, recallReviewSignals, sourceCitations, sourceLearningPacks, studyDocuments } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 import { calculateMastery } from "@/lib/mastery-calculation";
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   if (!ownerId) return unauthorizedResponse();
   try {
     await ensureVitaeSchema();
-    const [progress, notes, documents, sourceDetails, extractions, citations, reviews, imported, drafts, recall, recallSignals, dailyActions, questions, supportLinks, reasoningProgress, repairs, assessments, mistakes, maps, activities, versions, evidenceLinks, qualityReviews, freshnessReviews] = await Promise.all([
+    const [progress, notes, documents, sourceDetails, extractions, citations, reviews, imported, drafts, recall, recallSignals, dailyActions, questions, supportLinks, reasoningProgress, repairs, assessments, mistakes, maps, activities, versions, evidenceLinks, qualityReviews, freshnessReviews, sourcePacks, scripts, drills] = await Promise.all([
       getDb().select().from(lessonProgress).where(eq(lessonProgress.ownerId, ownerId)),
       getDb().select().from(lessonNotes).where(eq(lessonNotes.ownerId, ownerId)),
       getDb().select().from(studyDocuments).where(eq(studyDocuments.ownerId, ownerId)),
@@ -44,6 +44,9 @@ export async function GET(request: Request) {
       getDb().select().from(learningEvidenceLinks).where(eq(learningEvidenceLinks.ownerId, ownerId)),
       getDb().select().from(questionQualityReviews).where(eq(questionQualityReviews.ownerId, ownerId)),
       getDb().select().from(evidenceFreshnessReviews).where(eq(evidenceFreshnessReviews.ownerId, ownerId)),
+      getDb().select().from(sourceLearningPacks).where(eq(sourceLearningPacks.ownerId, ownerId)),
+      getDb().select().from(illnessScripts).where(eq(illnessScripts.ownerId, ownerId)),
+      getDb().select().from(diagnosticDrills).where(eq(diagnosticDrills.ownerId, ownerId)),
     ]);
     const mastery = calculateMastery({ progress, notes, attempts: assessments, activities, reviews: recall, mistakes });
     const summary = {
@@ -68,6 +71,9 @@ export async function GET(request: Request) {
       connectedNoteLinks: evidenceLinks.length,
       questionQualityReviews: qualityReviews.length,
       evidenceFreshnessReviews: freshnessReviews.length,
+      sourceLearningPacks: sourcePacks.length,
+      illnessScripts: scripts.length,
+      diagnosticDrills: drills.length,
       masteryScore: mastery.score,
     };
     if (new URL(request.url).searchParams.get("mode") === "summary") {
@@ -76,7 +82,7 @@ export async function GET(request: Request) {
     const generatedAt = new Date().toISOString();
     const archive = {
       format: "poh-tah-toh-study-backup",
-      schemaVersion: 4,
+      schemaVersion: 5,
       generatedAt,
       privacy: "Owner-scoped export. Internal owner identifiers and storage object keys are excluded.",
       sourceFileNotice: "The archive includes source metadata and references, not copyrighted PDF or Word file bytes.",
@@ -107,6 +113,9 @@ export async function GET(request: Request) {
         learningEvidenceLinks: sanitizeRows(evidenceLinks),
         questionQualityReviews: sanitizeRows(qualityReviews),
         evidenceFreshnessReviews: sanitizeRows(freshnessReviews),
+        sourceLearningPacks: sanitizeRows(sourcePacks),
+        illnessScripts: sanitizeRows(scripts),
+        diagnosticDrills: sanitizeRows(drills),
       },
     };
     const date = generatedAt.slice(0, 10);

@@ -5,7 +5,8 @@ import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 import { recordLearningVersion, type VersionedEntityType, versionLabel } from "@/lib/learning-history";
 
-const entityTypes = new Set<VersionedEntityType>(["note", "mind_map", "alignment_review", "lesson_draft"]);
+const entityTypes = new Set<VersionedEntityType>(["note", "mind_map", "alignment_review", "lesson_draft", "source_pack", "illness_script", "diagnostic_drill"]);
+const restorableEntityTypes = new Set<VersionedEntityType>(["note", "mind_map", "alignment_review", "lesson_draft"]);
 
 function parsePayload(value: string) {
   try { return JSON.parse(value) as Record<string, unknown>; } catch { return null; }
@@ -57,8 +58,8 @@ export async function GET(request: Request) {
       const leftPayload = parsePayload(left.payloadJson); const rightPayload = parsePayload(right.payloadJson);
       if (!leftPayload || !rightPayload) return Response.json({ error: "One of those versions is no longer readable." }, { status: 422 });
       return Response.json({
-        left: { id: left.id, entityType: left.entityType, entityKey: left.entityKey, action: left.action, summary: left.summary, createdAt: left.createdAt },
-        right: { id: right.id, entityType: right.entityType, entityKey: right.entityKey, action: right.action, summary: right.summary, createdAt: right.createdAt },
+        left: { id: left.id, entityType: left.entityType, entityKey: left.entityKey, action: left.action, summary: left.summary, createdAt: left.createdAt, restorable: restorableEntityTypes.has(left.entityType as VersionedEntityType) },
+        right: { id: right.id, entityType: right.entityType, entityKey: right.entityKey, action: right.action, summary: right.summary, createdAt: right.createdAt, restorable: restorableEntityTypes.has(right.entityType as VersionedEntityType) },
         changes: comparison(leftPayload, rightPayload),
         confirmationKey: `${left.entityType}:${left.entityKey}`,
       });
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
     const filtered = rows.filter((row) => (!requestedType || row.entityType === requestedType) && (!requestedKey || row.entityKey === requestedKey));
     const counts = Object.fromEntries([...entityTypes].map((type) => [type, rows.filter((row) => row.entityType === type).length]));
     return Response.json({
-      versions: filtered.map((row) => ({ id: row.id, entityType: row.entityType, entityKey: row.entityKey, action: row.action, summary: row.summary, createdAt: row.createdAt })),
+      versions: filtered.map((row) => ({ id: row.id, entityType: row.entityType, entityKey: row.entityKey, action: row.action, summary: row.summary, createdAt: row.createdAt, restorable: restorableEntityTypes.has(row.entityType as VersionedEntityType) })),
       counts,
       total: rows.length,
     });
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
       getDb().select().from(learningVersions).where(and(eq(learningVersions.ownerId, ownerId), eq(learningVersions.id, comparisonLeftId))).limit(1).then((rows) => rows[0]),
       getDb().select().from(learningVersions).where(and(eq(learningVersions.ownerId, ownerId), eq(learningVersions.id, comparisonRightId))).limit(1).then((rows) => rows[0]),
     ]);
-    if (!version || !entityTypes.has(version.entityType as VersionedEntityType)) return Response.json({ error: "That private version could not be found." }, { status: 404 });
+    if (!version || !restorableEntityTypes.has(version.entityType as VersionedEntityType)) return Response.json({ error: "This clinical review record is preserved as an audit trail and cannot be rolled back from history." }, { status: 409 });
     if (!comparisonLeft || !comparisonRight || comparisonLeft.entityType !== version.entityType || comparisonRight.entityType !== version.entityType || comparisonLeft.entityKey !== version.entityKey || comparisonRight.entityKey !== version.entityKey || body.confirmationKey !== `${version.entityType}:${version.entityKey}`) return Response.json({ error: "The comparison preview is stale. Compare the two versions again before restoring." }, { status: 409 });
     const payload = parsePayload(version.payloadJson);
     if (!payload) return Response.json({ error: "That version is no longer readable." }, { status: 422 });

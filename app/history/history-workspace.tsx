@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-type EntityType = "note" | "mind_map" | "alignment_review" | "lesson_draft";
-type Version = { id: string; entityType: EntityType; entityKey: string; action: string; summary: string; createdAt: string };
+type EntityType = "note" | "mind_map" | "alignment_review" | "lesson_draft" | "source_pack" | "illness_script" | "diagnostic_drill";
+type Version = { id: string; entityType: EntityType; entityKey: string; action: string; summary: string; createdAt: string; restorable: boolean };
 type HistoryData = { versions: Version[]; counts: Record<EntityType, number>; total: number };
 type Comparison = { left: Version; right: Version; changes: Array<{ field: string; before: string; after: string }>; confirmationKey: string };
-const labels: Record<EntityType, string> = { note: "Lesson notes", mind_map: "Mind maps", alignment_review: "Source mappings", lesson_draft: "Lesson drafts" };
-const emptyCounts = { note: 0, mind_map: 0, alignment_review: 0, lesson_draft: 0 };
+const labels: Record<EntityType, string> = { note: "Lesson notes", mind_map: "Mind maps", alignment_review: "Source mappings", lesson_draft: "Lesson drafts", source_pack: "Source packs", illness_script: "Illness scripts", diagnostic_drill: "Diagnostic drills" };
+const emptyCounts = { note: 0, mind_map: 0, alignment_review: 0, lesson_draft: 0, source_pack: 0, illness_script: 0, diagnostic_drill: 0 };
 
 export function HistoryWorkspace() {
   const [data, setData] = useState<HistoryData>({ versions: [], counts: emptyCounts, total: 0 });
@@ -38,6 +38,7 @@ export function HistoryWorkspace() {
     catch (error) { setMessage(error instanceof Error ? error.message : "Versions could not be compared."); }
   }
   async function restore(version: Version) {
+    if (!version.restorable) { setMessage("Clinical source-pack, illness-script, and diagnostic-drill versions remain permanent review evidence. Edit and review the live record instead of rolling an audit decision back."); return; }
     if (!comparison || ![comparison.left.id, comparison.right.id].includes(version.id)) { setMessage("Compare this version with another version of the same item first."); return; }
     if (!window.confirm(`Restore this ${labels[version.entityType].toLowerCase()} version? A safety copy of the current version will be saved first.`)) return;
     setRestoring(version.id); setMessage("Saving a safety copy and restoring the selected version…");

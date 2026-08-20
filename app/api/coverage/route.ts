@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { alignmentReviews, documentExtractions, documentSourceDetails, generatedQuestions, lessonDrafts, lessonProgress, recallReviews, studyDocuments } from "@/db/schema";
+import { alignmentReviews, documentExtractions, documentSourceDetails, generatedQuestions, lessonDrafts, lessonProgress, recallReviews, sourceLearningPacks, studyDocuments } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 import { coverageObjectives, getObjectiveLessonLinks } from "@/lib/subject-alignments";
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   if (!ownerId) return unauthorizedResponse();
   try {
     await ensureVitaeSchema();
-    const [reviews, drafts, progress, recall, documents, sourceDetails, extractions, questions] = await Promise.all([
+    const [reviews, drafts, progress, recall, documents, sourceDetails, extractions, questions, sourcePacks] = await Promise.all([
       getDb().select().from(alignmentReviews).where(eq(alignmentReviews.ownerId, ownerId)),
       getDb().select().from(lessonDrafts).where(eq(lessonDrafts.ownerId, ownerId)),
       getDb().select().from(lessonProgress).where(eq(lessonProgress.ownerId, ownerId)),
@@ -19,6 +19,7 @@ export async function GET(request: Request) {
       getDb().select().from(documentSourceDetails).where(eq(documentSourceDetails.ownerId, ownerId)),
       getDb().select().from(documentExtractions).where(eq(documentExtractions.ownerId, ownerId)),
       getDb().select().from(generatedQuestions).where(eq(generatedQuestions.ownerId, ownerId)),
+      getDb().select().from(sourceLearningPacks).where(eq(sourceLearningPacks.ownerId, ownerId)),
     ]);
     const reviewMap = new Map(reviews.map((review) => [review.alignmentId, review.decision]));
     const draftMap = new Map(drafts.map((draft) => [draft.alignmentId, draft]));
@@ -39,6 +40,7 @@ export async function GET(request: Request) {
       const lessonSlugs = new Set(lessonLinks.map((lesson) => lesson.slug));
       const recallCards = recall.filter((card) => lessonSlugs.has(card.lessonSlug));
       const completedLessons = lessonLinks.filter((lesson) => progressMap.get(lesson.slug)?.status === "complete").length;
+      const objectivePacks = sourcePacks.filter((pack) => pack.objectiveId === objective.id);
       const gaps = [
         decision !== "approved" ? "Approve the chapter mapping" : "",
         objective.pageReference.toLowerCase().includes("check needed") || objective.pageReference.toLowerCase().includes("no approved") || objective.pageReference === "Not uploaded" ? "Confirm an exact page" : "",
@@ -46,6 +48,7 @@ export async function GET(request: Request) {
         linkedDocument && !extraction?.searchablePages ? "Build the deep page index" : "",
         !lessonLinks.length ? "Prepare the linked lesson" : "",
         !objectiveQuestions.some((question) => question.status === "approved") ? "Approve source-backed questions" : "",
+        !objectivePacks.some((pack) => pack.status === "approved") ? "Prepare and approve a source learning pack" : "",
       ].filter(Boolean);
       return {
         ...objective,
@@ -56,6 +59,7 @@ export async function GET(request: Request) {
         linkedSource: linkedDocument ? { id: linkedDocument.id, filename: linkedDocument.filename, bookTitle: linkedDetail?.bookTitle ?? "", sectionLabel: linkedDetail?.sectionLabel ?? "", pageRange: linkedDetail?.pageRange ?? "", searchablePages: extraction?.searchablePages ?? 0, readerHref: extraction?.searchablePages ? `/reader/${linkedDocument.id}` : "" } : null,
         questionSummary: { total: objectiveQuestions.length, pending: objectiveQuestions.filter((question) => question.status === "pending_review").length, approved: objectiveQuestions.filter((question) => question.status === "approved").length, types: Array.from(new Set(objectiveQuestions.map((question) => question.questionType))) },
         learningEvidence: { completedLessons, totalLessons: lessonLinks.length, recallCards: recallCards.length, reviewedCards: recallCards.filter((card) => card.repetitions > 0).length },
+        sourcePackSummary: { total: objectivePacks.length, pending: objectivePacks.filter((pack) => pack.status === "pending_review").length, approved: objectivePacks.filter((pack) => pack.status === "approved").length },
         gaps,
       };
     });
@@ -81,6 +85,7 @@ export async function GET(request: Request) {
         exactPageReady: objectives.filter((item) => !item.gaps.includes("Confirm an exact page")).length,
         sourceLinked: objectives.filter((item) => item.linkedSource).length,
         questionReady: objectives.filter((item) => item.questionSummary.approved > 0).length,
+        approvedSourcePacks: sourcePacks.filter((item) => item.status === "approved").length,
         gapCount: objectives.reduce((count, item) => count + item.gaps.length, 0),
       },
     });

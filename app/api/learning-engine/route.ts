@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { alignmentReviews, evidenceFreshnessReviews, learningActivityAttempts, lessonProgress, mistakeNotebook, questionQualityReviews, recallReviews, studyDocuments } from "@/db/schema";
+import { alignmentReviews, diagnosticDrills, evidenceFreshnessReviews, illnessScripts, learningActivityAttempts, lessonProgress, mistakeNotebook, questionQualityReviews, recallReviews, sourceLearningPacks, studyDocuments } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 import { learningGraph } from "@/lib/learning-engine";
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   if (!ownerId) return unauthorizedResponse();
   try {
     await ensureVitaeSchema();
-    const [progress, activities, mistakes, reviews, documents, alignments, qualityReviews, freshnessReviews] = await Promise.all([
+    const [progress, activities, mistakes, reviews, documents, alignments, qualityReviews, freshnessReviews, sourcePacks, scripts, drills] = await Promise.all([
       getDb().select().from(lessonProgress).where(eq(lessonProgress.ownerId, ownerId)),
       getDb().select().from(learningActivityAttempts).where(eq(learningActivityAttempts.ownerId, ownerId)),
       getDb().select().from(mistakeNotebook).where(eq(mistakeNotebook.ownerId, ownerId)),
@@ -25,6 +25,9 @@ export async function GET(request: Request) {
       getDb().select().from(alignmentReviews).where(eq(alignmentReviews.ownerId, ownerId)),
       getDb().select().from(questionQualityReviews).where(eq(questionQualityReviews.ownerId, ownerId)),
       getDb().select().from(evidenceFreshnessReviews).where(eq(evidenceFreshnessReviews.ownerId, ownerId)),
+      getDb().select().from(sourceLearningPacks).where(eq(sourceLearningPacks.ownerId, ownerId)),
+      getDb().select().from(illnessScripts).where(eq(illnessScripts.ownerId, ownerId)),
+      getDb().select().from(diagnosticDrills).where(eq(diagnosticDrills.ownerId, ownerId)),
     ]);
     const diagnostics = activities.filter((item) => item.activityType === "diagnostic").sort((a, b) => b.completedAt.localeCompare(a.completedAt));
     const cases = activities.filter((item) => item.activityType === "clinical_case");
@@ -35,6 +38,12 @@ export async function GET(request: Request) {
     const cumulativeTests = activities.filter((item) => item.activityType === "cumulative_progress_test");
     const vivas = activities.filter((item) => item.activityType === "oral_viva");
     const voiceTeachBacks = activities.filter((item) => item.activityType === "voice_teach_back");
+    const diagnosticJustifications = activities.filter((item) => item.activityType === "diagnostic_justification");
+    const counterfactualAttempts = activities.filter((item) => item.activityType === "counterfactual_transfer");
+    const approvedSourcePacks = sourcePacks.filter((item) => item.status === "approved");
+    const approvedScripts = scripts.filter((item) => item.status === "approved");
+    const approvedDifferentials = drills.filter((item) => item.status === "approved" && item.drillType === "differential");
+    const approvedCounterfactuals = drills.filter((item) => item.status === "approved" && item.drillType === "counterfactual");
     const highConfidenceWrong = interleaved.reduce((count, item) => {
       const details = parseDetails(item.detailsJson);
       return count + (details.results ?? []).filter((result) => !result.correct && details.confidence?.[result.questionId] === "high").length;
@@ -67,6 +76,10 @@ export async function GET(request: Request) {
     else if (questionReviews.length) recommendation = { kind: "question-quality", eyebrow: "Item review is waiting", title: `Inspect ${questionReviews.length} marked ${questionReviews.length === 1 ? "question" : "questions"}`, reason: "These questions were individually marked for review and should be resolved before expanding the bank.", href: "/question-quality", action: "Open quality lab" };
     else if (!vivas.length) recommendation = { kind: "viva", eyebrow: "Explain without options", title: "Take the cardiovascular oral viva", reason: "Your recognition evidence is ready to be tested as a spoken or typed mechanism explanation.", href: "/viva", action: "Start oral viva" };
     else if (!voiceTeachBacks.length) recommendation = { kind: "voice", eyebrow: "Repair the spoken chain", title: "Complete a focused voice teach-back", reason: "Your broad viva is saved. Now explain one causal chain and let each missing reasoning link enter targeted correction.", href: "/voice-teach-back", action: "Teach it back" };
+    else if (approvedSourcePacks.length && !approvedScripts.length) recommendation = { kind: "illness-script", eyebrow: "Organize approved disease evidence", title: "Build the first illness script", reason: "A source pack is approved, but its supported clinical fields have not yet been organized for differential reasoning.", href: "/illness-scripts", action: "Build illness script" };
+    else if (approvedScripts.length >= 2 && !approvedDifferentials.length) recommendation = { kind: "differential", eyebrow: "Compare the look-alikes", title: "Build a reviewed differential", reason: "At least two illness scripts are approved. Compare their discriminating findings before scored diagnostic practice.", href: "/diagnostic-reasoning", action: "Build differential" };
+    else if (approvedDifferentials.length && !diagnosticJustifications.length) recommendation = { kind: "justification", eyebrow: "Defend the decision", title: "Complete a diagnostic justification", reason: "A reviewed differential is ready. Name the diagnosis and account for support, negatives, alternatives, and missing information.", href: "/diagnostic-reasoning", action: "Practise justification" };
+    else if (approvedCounterfactuals.length && !counterfactualAttempts.length) recommendation = { kind: "counterfactual", eyebrow: "Test transfer", title: "Solve a one-finding variation", reason: "A reviewed counterfactual case is ready to test whether your causal reasoning transfers beyond the original stem.", href: "/diagnostic-reasoning", action: "Test transfer" };
     else recommendation = { kind: "assessment", eyebrow: "Integrate and verify", title: "Take the timed cardiovascular check", reason: "Diagnostic, lesson, case, and visual evidence are present. A timed assessment is the next integration step.", href: "/assessment", action: "Start assessment" };
 
     const graph = learningGraph.map((node) => ({
@@ -83,6 +96,11 @@ export async function GET(request: Request) {
         : node.id === "progress-test" ? (cumulativeTests.length ? "evidence" : "ready")
         : node.id === "viva" ? (vivas.length ? "evidence" : "ready")
         : node.id === "voice" ? (voiceTeachBacks.length ? "evidence" : "ready")
+        : node.id === "source-pack" ? (approvedSourcePacks.length ? "evidence" : sourcePacks.length ? "active" : "ready")
+        : node.id === "illness-script" ? (approvedScripts.length ? "evidence" : scripts.length || approvedSourcePacks.length ? "active" : "mapped")
+        : node.id === "differential" ? (approvedDifferentials.length ? "evidence" : drills.some((item) => item.drillType === "differential") || approvedScripts.length >= 2 ? "active" : "mapped")
+        : node.id === "justification" ? (diagnosticJustifications.length ? "evidence" : approvedDifferentials.length ? "ready" : "mapped")
+        : node.id === "counterfactual" ? (counterfactualAttempts.length ? "evidence" : approvedCounterfactuals.length ? "ready" : drills.some((item) => item.drillType === "counterfactual") ? "active" : "mapped")
         : node.id === "confidence" ? (interleaved.length ? (highConfidenceWrong ? "active" : "evidence") : "ready")
         : node.id === "blueprint" ? "ready"
         : node.id === "correction" ? (openMistakes.length || reviews.length ? "active" : "ready")
@@ -91,6 +109,6 @@ export async function GET(request: Request) {
         : node.id === "mastery" ? "active"
         : node.id === "outcomes" ? (activities.length ? "evidence" : "ready") : "mapped",
     }));
-    return Response.json({ recommendation, graph, evidence: { diagnostics: diagnostics.length, cases: cases.length, encounters: encounters.length, visuals: visuals.length, interleaved: interleaved.length, professorDialogues: professorDialogues.length, cumulativeTests: cumulativeTests.length, vivas: vivas.length, voiceTeachBacks: voiceTeachBacks.length, highConfidenceWrong, openMistakes: openMistakes.length, dueReviews: dueReviews.length, dueEvidence: dueEvidence.length, questionReviews: questionReviews.length, sourceDocuments: documents.length, approvedMappings: alignments.filter((item) => item.decision === "approved").length }, latestDiagnostic: latestDiagnostic ? { score: Math.round(latestDiagnostic.correctCount / latestDiagnostic.totalCount * 100), domainScores: scores, completedAt: latestDiagnostic.completedAt } : null });
+    return Response.json({ recommendation, graph, evidence: { diagnostics: diagnostics.length, cases: cases.length, encounters: encounters.length, visuals: visuals.length, interleaved: interleaved.length, professorDialogues: professorDialogues.length, cumulativeTests: cumulativeTests.length, vivas: vivas.length, voiceTeachBacks: voiceTeachBacks.length, sourcePacks: approvedSourcePacks.length, illnessScripts: approvedScripts.length, differentialDrills: approvedDifferentials.length, diagnosticJustifications: diagnosticJustifications.length, counterfactualAttempts: counterfactualAttempts.length, highConfidenceWrong, openMistakes: openMistakes.length, dueReviews: dueReviews.length, dueEvidence: dueEvidence.length, questionReviews: questionReviews.length, sourceDocuments: documents.length, approvedMappings: alignments.filter((item) => item.decision === "approved").length }, latestDiagnostic: latestDiagnostic ? { score: Math.round(latestDiagnostic.correctCount / latestDiagnostic.totalCount * 100), domainScores: scores, completedAt: latestDiagnostic.completedAt } : null });
   } catch { return Response.json({ error: "The learning engine could not calculate your next step." }, { status: 500 }); }
 }

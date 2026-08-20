@@ -27,7 +27,7 @@ export function calculateMasteryProof(input: {
     });
     const recall = recallCards.length > 0 || topicResults.some((item) => item.correct && ["diagnostic", "interleaved_review", "cumulative_progress_test"].includes(item.activityType));
     const explain = input.activities.some((activity) => ["professor_dialogue", "voice_teach_back"].includes(activity.activityType) && activity.correctCount > 0 && parseDetails(activity.detailsJson).lessonSlug === topic.slug);
-    const apply = topicResults.some((item) => item.correct && ["clinical_case", "visual_lab", "clinical_encounter"].includes(item.activityType));
+    const apply = topicResults.some((item) => item.correct && ["clinical_case", "visual_lab", "clinical_encounter", "diagnostic_justification", "counterfactual_transfer"].includes(item.activityType));
     const cumulative = input.activities.filter((activity) => activity.activityType === "cumulative_progress_test").map((activity) => ({ activity, details: parseDetails(activity.detailsJson) })).filter(({ details }) => (details.domainScores?.[topic.slug] ?? 0) >= 75).sort((a, b) => a.activity.completedAt.localeCompare(b.activity.completedAt));
     const delayedFromLesson = Boolean(lesson && cumulative.some(({ activity }) => new Date(activity.completedAt).getTime() - new Date(lesson.updatedAt).getTime() >= 7 * 86_400_000));
     const repeatedAcrossWeek = cumulative.length >= 2 && new Date(cumulative.at(-1)!.activity.completedAt).getTime() - new Date(cumulative[0].activity.completedAt).getTime() >= 7 * 86_400_000;
@@ -36,7 +36,7 @@ export function calculateMasteryProof(input: {
     const gates = [
       { key: "recall", label: "Recall", passed: recall, evidence: recall ? `${recallCards.length || topicResults.filter((item) => item.correct).length} successful retrieval signal${(recallCards.length || topicResults.filter((item) => item.correct).length) === 1 ? "" : "s"}` : "Complete a recall card or source-trailed retrieval question" },
       { key: "explain", label: "Explain", passed: explain, evidence: explain ? "No-options Professor Mode or voice teach-back passed" : "Pass a no-options Professor Mode or voice teach-back explanation" },
-      { key: "apply", label: "Apply", passed: apply, evidence: apply ? "Case, visual, or encounter application passed" : "Pass an application decision in a case, visual lab, or encounter" },
+      { key: "apply", label: "Apply", passed: apply, evidence: apply ? "Case, diagnostic, transfer, visual, or encounter application passed" : "Pass an application decision in a case, diagnostic justification, transfer case, visual lab, or encounter" },
       { key: "retain", label: "Retain", passed: retain, evidence: retain ? "At least 75% retained after a 7-day interval" : "Retest at 75% or more after at least 7 days" },
     ];
     const passedCount = gates.filter((gate) => gate.passed).length;

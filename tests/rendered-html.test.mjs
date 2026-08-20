@@ -307,7 +307,7 @@ test("renders the clinical encounter, question-quality lab, strict mastery proof
   assert.match(masteryHtml, /Recall.*Explain.*Apply.*Retain/s);
   assert.match(freshnessHtml, /Know when the source/);
   assert.match(freshnessHtml, /never silently rewrite a clinical claim/);
-  assert.match(toolsHtml, /Features 23–50/);
+  assert.match(toolsHtml, /Features 23–55/);
   assert.match(toolsHtml, /Clinical encounter simulator/);
   assert.match(toolsHtml, /Evidence freshness/);
 
@@ -331,7 +331,7 @@ test("renders the clinical encounter, question-quality lab, strict mastery proof
   assert.match(qualityApi, /individual human decision|individual review decision/i);
   assert.match(masteryApi, /calculateMasteryProof/);
   assert.match(freshnessApi, /No clinical teaching claim was changed automatically/);
-  assert.match(backupText, /schemaVersion: 4/);
+  assert.match(backupText, /schemaVersion: 5/);
   assert.match(backupText, /questionQualityReviews/);
   assert.match(backupText, /evidenceFreshnessReviews/);
 });
@@ -355,7 +355,7 @@ test("renders voice teach-back, targeted reasoning correction, and real learning
   assert.match(outcomesHtml, /7-, 30-, and 90-day retention/);
   assert.match(outcomesHtml, /Unfamiliar-case performance/);
   assert.match(outcomesHtml, /No delayed evidence yet/);
-  assert.match(toolsHtml, /Features 23–50/);
+  assert.match(toolsHtml, /Features 23–55/);
   assert.match(toolsHtml, /Voice viva and teach-back/);
   assert.match(toolsHtml, /Real learning outcomes/);
   assert.match(learnHtml, /Voice teach-back/);
@@ -644,6 +644,57 @@ test("renders connected notes, visual comparisons, selective restoration, custom
   assert.match(searchApi, /source_search_terms/);
   assert.match(searchApi, /performance: \{ cache: "hit"/);
   assert.match(extractionApi, /sourceProcessingJobs/);
+});
+
+test("renders source-gated illness scripts, diagnostic justification, and counterfactual transfer", async () => {
+  const [toolsResponse, packsResponse, scriptsResponse, diagnosticResponse] = await Promise.all([
+    render("/study-tools"), render("/source-packs"), render("/illness-scripts"), render("/diagnostic-reasoning"),
+  ]);
+  for (const response of [toolsResponse, packsResponse, scriptsResponse, diagnosticResponse]) assert.equal(response.status, 200);
+  const [toolsHtml, packsHtml, scriptsHtml, diagnosticHtml] = await Promise.all([
+    toolsResponse.text(), packsResponse.text(), scriptsResponse.text(), diagnosticResponse.text(),
+  ]);
+  assert.match(toolsHtml, /Features 23–55/);
+  assert.match(toolsHtml, /Source Pack Builder/);
+  assert.match(toolsHtml, /Counterfactual transfer cases/);
+  assert.match(packsHtml, /One section becomes/);
+  assert.match(packsHtml, /Exact passage/);
+  assert.match(scriptsHtml, /Organize the disease/);
+  assert.match(scriptsHtml, /enabling conditions/i);
+  assert.match(diagnosticHtml, /Compare the look-alikes/);
+  assert.match(diagnosticHtml, /Diagnostic justification/);
+  assert.match(diagnosticHtml, /Counterfactual transfer/);
+
+  const [migration, schema, runtimeSchema, packsApi, scriptsApi, drillsApi, coverageApi, backupApi, outcomes, offlinePacks] = await Promise.all([
+    readFile(new URL("../drizzle/0011_smiling_thundra.sql", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/runtime-schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/source-packs/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/illness-scripts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/diagnostic-drills/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/coverage/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/backup/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/learning-outcomes.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/offline-packs.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(migration, /CREATE TABLE `source_learning_packs`/);
+  assert.match(migration, /CREATE TABLE `illness_scripts`/);
+  assert.match(migration, /CREATE TABLE `diagnostic_drills`/);
+  assert.match(schema, /sourceLearningPacks|illnessScripts|diagnosticDrills/);
+  assert.match(runtimeSchema, /CREATE TABLE IF NOT EXISTS source_learning_packs/);
+  assert.match(packsApi, /normalize\(chunk\.textContent\)\.includes/);
+  assert.match(packsApi, /status: "pending_review"/);
+  assert.match(scriptsApi, /source_pack_approval_required/);
+  assert.match(scriptsApi, /supported/);
+  assert.match(drillsApi, /diagnostic_justification/);
+  assert.match(drillsApi, /counterfactual_transfer/);
+  assert.match(drillsApi, /pertinentNegatives/);
+  assert.match(drillsApi, /Automatic phrase matching/);
+  assert.match(coverageApi, /Prepare and approve a source learning pack/);
+  assert.match(backupApi, /schemaVersion: 5/);
+  assert.match(backupApi, /sourceLearningPacks|illnessScripts|diagnosticDrills/);
+  assert.match(outcomes, /diagnostic_justification|counterfactual_transfer/);
+  assert.match(offlinePacks, /source-packs|illness-scripts|diagnostic-reasoning/);
 });
 
 test("removes the disposable starter and includes production brand metadata", async () => {
