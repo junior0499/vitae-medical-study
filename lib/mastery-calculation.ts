@@ -33,6 +33,7 @@ export function calculateMastery(input: {
       applicationQuestions: activityAnswered,
       diagnosticAttempts: input.activities.filter((item) => item.activityType === "diagnostic").length,
       caseAttempts: input.activities.filter((item) => item.activityType === "clinical_case").length,
+      clinicalEncounterAttempts: input.activities.filter((item) => item.activityType === "clinical_encounter").length,
       visualLabAttempts: input.activities.filter((item) => item.activityType === "visual_lab").length,
       vivaAttempts: input.activities.filter((item) => item.activityType === "oral_viva").length,
       interleavedAttempts: input.activities.filter((item) => item.activityType === "interleaved_review").length,

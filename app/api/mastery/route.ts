@@ -4,6 +4,7 @@ import { assessmentAttempts, learningActivityAttempts, lessonNotes, lessonProgre
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 import { calculateMastery } from "@/lib/mastery-calculation";
+import { calculateMasteryProof } from "@/lib/mastery-proof";
 
 export async function GET(request: Request) {
   const ownerId = getCurrentOwnerId(request);
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
       getDb().select().from(recallReviews).where(eq(recallReviews.ownerId, ownerId)),
       getDb().select().from(mistakeNotebook).where(eq(mistakeNotebook.ownerId, ownerId)),
     ]);
-    return Response.json(calculateMastery({ progress, notes, attempts, activities, reviews, mistakes }));
+    return Response.json({ ...calculateMastery({ progress, notes, attempts, activities, reviews, mistakes }), strictProof: calculateMasteryProof({ progress, activities, reviews, mistakes }) });
   } catch {
     return Response.json({ error: "Mastery evidence could not be calculated." }, { status: 500 });
   }

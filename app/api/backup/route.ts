@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { alignmentReviews, assessmentAttempts, clinicalReasoningProgress, dailyQueueActions, documentExtractions, documentSourceDetails, generatedQuestions, importedAlignments, learningActivityAttempts, learningEvidenceLinks, learningVersions, lessonDrafts, lessonNotes, lessonProgress, misconceptionRepairs, mistakeNotebook, noteMindMaps, objectiveSourceLinks, recallReviews, recallReviewSignals, sourceCitations, studyDocuments } from "@/db/schema";
+import { alignmentReviews, assessmentAttempts, clinicalReasoningProgress, dailyQueueActions, documentExtractions, documentSourceDetails, evidenceFreshnessReviews, generatedQuestions, importedAlignments, learningActivityAttempts, learningEvidenceLinks, learningVersions, lessonDrafts, lessonNotes, lessonProgress, misconceptionRepairs, mistakeNotebook, noteMindMaps, objectiveSourceLinks, questionQualityReviews, recallReviews, recallReviewSignals, sourceCitations, studyDocuments } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 import { calculateMastery } from "@/lib/mastery-calculation";
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   if (!ownerId) return unauthorizedResponse();
   try {
     await ensureVitaeSchema();
-    const [progress, notes, documents, sourceDetails, extractions, citations, reviews, imported, drafts, recall, recallSignals, dailyActions, questions, supportLinks, reasoningProgress, repairs, assessments, mistakes, maps, activities, versions, evidenceLinks] = await Promise.all([
+    const [progress, notes, documents, sourceDetails, extractions, citations, reviews, imported, drafts, recall, recallSignals, dailyActions, questions, supportLinks, reasoningProgress, repairs, assessments, mistakes, maps, activities, versions, evidenceLinks, qualityReviews, freshnessReviews] = await Promise.all([
       getDb().select().from(lessonProgress).where(eq(lessonProgress.ownerId, ownerId)),
       getDb().select().from(lessonNotes).where(eq(lessonNotes.ownerId, ownerId)),
       getDb().select().from(studyDocuments).where(eq(studyDocuments.ownerId, ownerId)),
@@ -42,6 +42,8 @@ export async function GET(request: Request) {
       getDb().select().from(learningActivityAttempts).where(eq(learningActivityAttempts.ownerId, ownerId)),
       getDb().select().from(learningVersions).where(eq(learningVersions.ownerId, ownerId)),
       getDb().select().from(learningEvidenceLinks).where(eq(learningEvidenceLinks.ownerId, ownerId)),
+      getDb().select().from(questionQualityReviews).where(eq(questionQualityReviews.ownerId, ownerId)),
+      getDb().select().from(evidenceFreshnessReviews).where(eq(evidenceFreshnessReviews.ownerId, ownerId)),
     ]);
     const mastery = calculateMastery({ progress, notes, attempts: assessments, activities, reviews: recall, mistakes });
     const summary = {
@@ -64,6 +66,8 @@ export async function GET(request: Request) {
       mindMaps: maps.length,
       savedVersions: versions.length,
       connectedNoteLinks: evidenceLinks.length,
+      questionQualityReviews: qualityReviews.length,
+      evidenceFreshnessReviews: freshnessReviews.length,
       masteryScore: mastery.score,
     };
     if (new URL(request.url).searchParams.get("mode") === "summary") {
@@ -72,7 +76,7 @@ export async function GET(request: Request) {
     const generatedAt = new Date().toISOString();
     const archive = {
       format: "poh-tah-toh-study-backup",
-      schemaVersion: 3,
+      schemaVersion: 4,
       generatedAt,
       privacy: "Owner-scoped export. Internal owner identifiers and storage object keys are excluded.",
       sourceFileNotice: "The archive includes source metadata and references, not copyrighted PDF or Word file bytes.",
@@ -101,6 +105,8 @@ export async function GET(request: Request) {
         noteMindMaps: sanitizeRows(maps),
         learningVersions: sanitizeRows(versions),
         learningEvidenceLinks: sanitizeRows(evidenceLinks),
+        questionQualityReviews: sanitizeRows(qualityReviews),
+        evidenceFreshnessReviews: sanitizeRows(freshnessReviews),
       },
     };
     const date = generatedAt.slice(0, 10);

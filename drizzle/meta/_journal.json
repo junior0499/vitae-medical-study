@@ -71,6 +71,13 @@
       "when": 1787252095339,
       "tag": "0009_premium_tinkerer",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1787259933361,
+      "tag": "0010_swift_william_stryker",
+      "breakpoints": true
     }
   ]
 }

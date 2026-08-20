@@ -14,6 +14,8 @@ export const restoreSpecs: Record<string, RestoreSpec> = {
   mistakeNotebook: { table: "mistake_notebook", label: "Mistake notebook", unique: ["assessmentId", "questionKey"], fields: [text("id", "id", 120), text("assessmentId", "assessment_id", 160), text("questionKey", "question_key", 180), text("subject", "subject", 160), text("lessonSlug", "lesson_slug", 160), text("prompt", "prompt", 4000), text("originalAnswer", "original_answer", 4000), text("correctedConcept", "corrected_concept", 5000), text("reason", "reason", 2000), text("sourceLabel", "source_label", 500), text("status", "status", 40), text("nextReviewAt", "next_review_at", 40), text("createdAt", "created_at", 40), text("updatedAt", "updated_at", 40)] },
   noteMindMaps: { table: "note_mind_maps", label: "Sideways mind maps", unique: ["lessonSlug"], fields: [text("id", "id", 120), text("lessonSlug", "lesson_slug", 160), text("title", "title", 240), text("nodesJson", "nodes_json", 30_000), text("createdAt", "created_at", 40), text("updatedAt", "updated_at", 40)] },
   learningVersions: { table: "learning_versions", label: "Learning version history", unique: ["id"], fields: [text("id", "id", 120), text("entityType", "entity_type", 80), text("entityKey", "entity_key", 180), text("action", "action", 40), text("summary", "summary", 300), text("payloadJson", "payload_json", 80_000), text("createdAt", "created_at", 40)] },
+  questionQualityReviews: { table: "question_quality_reviews", label: "Question quality decisions", unique: ["questionKey"], fields: [text("id", "id", 120), text("questionKey", "question_key", 180), text("sourceKind", "source_kind", 120), text("decision", "decision", 40), text("flagsJson", "flags_json", 10_000), text("reviewerNote", "reviewer_note", 3000), text("updatedAt", "updated_at", 40)] },
+  evidenceFreshnessReviews: { table: "evidence_freshness_reviews", label: "Evidence freshness reviews", unique: ["documentId", "objectiveId"], fields: [text("id", "id", 120), text("documentId", "document_id", 120), text("objectiveId", "objective_id", 160), text("sourceKind", "source_kind", 40), text("edition", "edition", 160), text("publicationDate", "publication_date", 20), text("reviewedAt", "reviewed_at", 20), text("reviewDueAt", "review_due_at", 20), text("decision", "decision", 40), text("conflictNote", "conflict_note", 3000), text("reviewerNote", "reviewer_note", 3000), text("updatedAt", "updated_at", 40)] },
 };
 
 export type SafeArchive = { format: string; schemaVersion: number; generatedAt?: string; data: Record<string, unknown[]> };
@@ -21,7 +23,7 @@ export type SafeArchive = { format: string; schemaVersion: number; generatedAt?:
 export function validateArchive(value: unknown): SafeArchive {
   if (!value || typeof value !== "object") throw new Error("This is not a Poh-tah-toh backup.");
   const archive = value as Partial<SafeArchive>;
-  if (archive.format !== "poh-tah-toh-study-backup" || archive.schemaVersion !== 3 || !archive.data || typeof archive.data !== "object") throw new Error("Choose an unedited Poh-tah-toh schema version 3 backup.");
+  if (archive.format !== "poh-tah-toh-study-backup" || ![3, 4].includes(Number(archive.schemaVersion)) || !archive.data || typeof archive.data !== "object") throw new Error("Choose an unedited Poh-tah-toh schema version 3 or 4 backup.");
   const count = Object.values(archive.data).reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0);
   if (count > 2000) throw new Error("This backup is larger than the 2,000-record safe restoration limit.");
   return archive as SafeArchive;

@@ -1,6 +1,6 @@
 import { and, desc, eq, ne } from "drizzle-orm";
 import { getDb } from "@/db";
-import { alignmentReviews, documentExtractions, documentSourceDetails, documentTextChunks, generatedQuestions, lessonDrafts, studyDocuments } from "@/db/schema";
+import { alignmentReviews, documentExtractions, documentSourceDetails, documentTextChunks, evidenceFreshnessReviews, generatedQuestions, lessonDrafts, studyDocuments } from "@/db/schema";
 import { ensureVitaeSchema } from "@/db/runtime-schema";
 import { getCurrentOwnerId, unauthorizedResponse } from "@/lib/current-user";
 import { coverageObjectives, findCoverageObjective } from "@/lib/subject-alignments";
@@ -82,6 +82,10 @@ export async function POST(request: Request) {
     ]);
     if (review?.decision !== "approved") return Response.json({ error: "Approve this objective’s source mapping first.", code: "approval_required" }, { status: 409 });
     if (!draft) return Response.json({ error: "Create a lesson draft linked to an uploaded Book section first.", code: "lesson_source_required" }, { status: 409 });
+    const freshness = await getDb().select().from(evidenceFreshnessReviews).where(eq(evidenceFreshnessReviews.ownerId, ownerId));
+    const freshnessReview = freshness.find((item) => item.documentId === draft.sourceDocumentId && item.objectiveId === objectiveId) ?? freshness.find((item) => item.documentId === draft.sourceDocumentId && !item.objectiveId);
+    const today = new Date().toISOString().slice(0, 10);
+    if (freshnessReview?.decision === "superseded" || freshnessReview?.decision === "verified_current" && freshnessReview.reviewDueAt && freshnessReview.reviewDueAt <= today) return Response.json({ error: "This source is superseded or due for freshness review. Review it before creating new questions.", code: "freshness_review_required" }, { status: 409 });
     const [document, detail, extraction, chunks] = await Promise.all([
       getDb().select().from(studyDocuments).where(and(eq(studyDocuments.ownerId, ownerId), eq(studyDocuments.id, draft.sourceDocumentId))).limit(1).then((rows) => rows[0]),
       getDb().select().from(documentSourceDetails).where(and(eq(documentSourceDetails.ownerId, ownerId), eq(documentSourceDetails.documentId, draft.sourceDocumentId))).limit(1).then((rows) => rows[0] ?? null),

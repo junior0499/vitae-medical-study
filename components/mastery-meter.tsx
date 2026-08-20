@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Mastery = { score: number; level: string; evidence: { completedLessons: number; questionsAnswered: number; applicationQuestions: number; reviewCards: number } };
+type Mastery = { score: number; level: string; evidence: { completedLessons: number; questionsAnswered: number; applicationQuestions: number; reviewCards: number }; strictProof?: { masteredCount: number; totalTopics: number } };
 
 export function MasteryMeter() {
   const [mastery, setMastery] = useState<Mastery | null>(null);
@@ -15,6 +15,7 @@ export function MasteryMeter() {
   return <div className="semester-card">
     <span>Evidence-based mastery</span><strong>{mastery?.level ?? "Starting"}</strong>
     <div><i style={{ width: `${score}%` }} /><b>{score}%</b></div>
-    <small>{mastery ? `${mastery.evidence.completedLessons} lessons · ${mastery.evidence.questionsAnswered + mastery.evidence.applicationQuestions} answers · ${mastery.evidence.reviewCards} reviews` : "Calculating from your learning evidence…"}</small>
+    <small>{mastery ? `${mastery.strictProof?.masteredCount ?? 0}/${mastery.strictProof?.totalTopics ?? 2} strict proof · ${mastery.evidence.questionsAnswered + mastery.evidence.applicationQuestions} answers · ${mastery.evidence.reviewCards} reviews` : "Calculating from your learning evidence…"}</small>
+    <a href="/mastery-proof">See the four gates →</a>
   </div>;
 }

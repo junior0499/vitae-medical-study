@@ -286,6 +286,56 @@ test("renders the gold-standard cardiovascular pathway, adaptive professor, prer
   assert.match(offlinePacks, /cardiovascular-pathway/);
 });
 
+test("renders the clinical encounter, question-quality lab, strict mastery proof, and evidence freshness register", async () => {
+  const [encounterResponse, qualityResponse, masteryResponse, freshnessResponse, toolsResponse] = await Promise.all([
+    render("/clinical-encounter"),
+    render("/question-quality"),
+    render("/mastery-proof"),
+    render("/evidence-governance"),
+    render("/study-tools"),
+  ]);
+  for (const response of [encounterResponse, qualityResponse, masteryResponse, freshnessResponse, toolsResponse]) assert.equal(response.status, 200);
+  const [encounterHtml, qualityHtml, masteryHtml, freshnessHtml, toolsHtml] = await Promise.all([
+    encounterResponse.text(), qualityResponse.text(), masteryResponse.text(), freshnessResponse.text(), toolsResponse.text(),
+  ]);
+  assert.match(encounterHtml, /Meet the patient/);
+  assert.match(encounterHtml, /Management/);
+  assert.match(encounterHtml, /The stop is part of the score/);
+  assert.match(qualityHtml, /Make every question/);
+  assert.match(qualityHtml, /Personal signal, not cohort psychometrics/);
+  assert.match(masteryHtml, /Mastered means/);
+  assert.match(masteryHtml, /Recall.*Explain.*Apply.*Retain/s);
+  assert.match(freshnessHtml, /Know when the source/);
+  assert.match(freshnessHtml, /never silently rewrite a clinical claim/);
+  assert.match(toolsHtml, /Features 23–48/);
+  assert.match(toolsHtml, /Clinical encounter simulator/);
+  assert.match(toolsHtml, /Evidence freshness/);
+
+  const [schemaText, runtimeText, migrationText, encounterApi, qualityApi, masteryApi, freshnessApi, backupText] = await Promise.all([
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/runtime-schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0010_swift_william_stryker.sql", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/clinical-encounter/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/question-quality/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/mastery/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/evidence-governance/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/backup/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(schemaText, /questionQualityReviews|evidenceFreshnessReviews/);
+  assert.match(runtimeText, /CREATE TABLE IF NOT EXISTS question_quality_reviews/);
+  assert.match(runtimeText, /CREATE TABLE IF NOT EXISTS evidence_freshness_reviews/);
+  assert.match(migrationText, /CREATE TABLE `question_quality_reviews`/);
+  assert.match(migrationText, /CREATE TABLE `evidence_freshness_reviews`/);
+  assert.match(encounterApi, /clinical_encounter/);
+  assert.match(encounterApi, /sourceBoundaryHonoured/);
+  assert.match(qualityApi, /individual human decision|individual review decision/i);
+  assert.match(masteryApi, /calculateMasteryProof/);
+  assert.match(freshnessApi, /No clinical teaching claim was changed automatically/);
+  assert.match(backupText, /schemaVersion: 4/);
+  assert.match(backupText, /questionQualityReviews/);
+  assert.match(backupText, /evidenceFreshnessReviews/);
+});
+
 test("renders approved-source search, recoverable history, and private backup", async () => {
   const [toolsResponse, searchResponse, historyResponse, backupResponse] = await Promise.all([
     render("/study-tools"),

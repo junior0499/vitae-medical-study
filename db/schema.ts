@@ -333,6 +333,40 @@ export const learningActivityAttempts = sqliteTable("learning_activity_attempts"
   index("idx_learning_activity_owner_activity").on(table.ownerId, table.activityId),
 ]);
 
+export const questionQualityReviews = sqliteTable("question_quality_reviews", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  questionKey: text("question_key").notNull(),
+  sourceKind: text("source_kind").notNull(),
+  decision: text("decision").notNull().default("active"),
+  flagsJson: text("flags_json").notNull().default("[]"),
+  reviewerNote: text("reviewer_note").notNull().default(""),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_question_quality_owner_question").on(table.ownerId, table.questionKey),
+  index("idx_question_quality_owner_decision").on(table.ownerId, table.decision),
+]);
+
+export const evidenceFreshnessReviews = sqliteTable("evidence_freshness_reviews", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  documentId: text("document_id").notNull(),
+  objectiveId: text("objective_id").notNull().default(""),
+  sourceKind: text("source_kind").notNull().default("textbook"),
+  edition: text("edition").notNull().default(""),
+  publicationDate: text("publication_date").notNull().default(""),
+  reviewedAt: text("reviewed_at").notNull().default(""),
+  reviewDueAt: text("review_due_at").notNull().default(""),
+  decision: text("decision").notNull().default("needs_review"),
+  conflictNote: text("conflict_note").notNull().default(""),
+  reviewerNote: text("reviewer_note").notNull().default(""),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_evidence_freshness_owner_document_objective").on(table.ownerId, table.documentId, table.objectiveId),
+  index("idx_evidence_freshness_owner_decision_due").on(table.ownerId, table.decision, table.reviewDueAt),
+  index("idx_evidence_freshness_owner_document").on(table.ownerId, table.documentId),
+]);
+
 export const learningVersions = sqliteTable("learning_versions", {
   id: text("id").primaryKey(),
   ownerId: text("owner_id").notNull(),

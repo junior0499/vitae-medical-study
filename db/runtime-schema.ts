@@ -346,6 +346,41 @@ export function ensureVitaeSchema() {
       ON learning_activity_attempts(owner_id, activity_type, completed_at)`),
     database.prepare(`CREATE INDEX IF NOT EXISTS idx_learning_activity_owner_activity
       ON learning_activity_attempts(owner_id, activity_id)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS question_quality_reviews (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      question_key TEXT NOT NULL,
+      source_kind TEXT NOT NULL,
+      decision TEXT DEFAULT 'active' NOT NULL,
+      flags_json TEXT DEFAULT '[]' NOT NULL,
+      reviewer_note TEXT DEFAULT '' NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_question_quality_owner_question
+      ON question_quality_reviews(owner_id, question_key)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_question_quality_owner_decision
+      ON question_quality_reviews(owner_id, decision)`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS evidence_freshness_reviews (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NOT NULL,
+      document_id TEXT NOT NULL,
+      objective_id TEXT DEFAULT '' NOT NULL,
+      source_kind TEXT DEFAULT 'textbook' NOT NULL,
+      edition TEXT DEFAULT '' NOT NULL,
+      publication_date TEXT DEFAULT '' NOT NULL,
+      reviewed_at TEXT DEFAULT '' NOT NULL,
+      review_due_at TEXT DEFAULT '' NOT NULL,
+      decision TEXT DEFAULT 'needs_review' NOT NULL,
+      conflict_note TEXT DEFAULT '' NOT NULL,
+      reviewer_note TEXT DEFAULT '' NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    database.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_evidence_freshness_owner_document_objective
+      ON evidence_freshness_reviews(owner_id, document_id, objective_id)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_evidence_freshness_owner_decision_due
+      ON evidence_freshness_reviews(owner_id, decision, review_due_at)`),
+    database.prepare(`CREATE INDEX IF NOT EXISTS idx_evidence_freshness_owner_document
+      ON evidence_freshness_reviews(owner_id, document_id)`),
     database.prepare(`CREATE TABLE IF NOT EXISTS learning_versions (
       id TEXT PRIMARY KEY NOT NULL,
       owner_id TEXT NOT NULL,
