@@ -36,6 +36,8 @@ export function calculateMastery(input: {
       visualLabAttempts: input.activities.filter((item) => item.activityType === "visual_lab").length,
       vivaAttempts: input.activities.filter((item) => item.activityType === "oral_viva").length,
       interleavedAttempts: input.activities.filter((item) => item.activityType === "interleaved_review").length,
+      professorDialogueAttempts: input.activities.filter((item) => item.activityType === "professor_dialogue").length,
+      cumulativeProgressTests: input.activities.filter((item) => item.activityType === "cumulative_progress_test").length,
       reviewCards: input.reviews.length,
       openMistakes: input.mistakes.filter((item) => item.status === "open").length,
     },

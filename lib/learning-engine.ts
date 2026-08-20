@@ -47,14 +47,17 @@ export const visualChallenges = [
 
 export const learningGraph = [
   { id: "syllabus", lane: "Requirement", title: "Semester 7 objective", detail: "The university objective defines what must be learned.", href: "/coverage" },
+  { id: "pathway", lane: "Sequence", title: "Prerequisite and competency path", detail: "The cardiovascular subject exposes every dependency, source gate, and performance target.", href: "/cardiovascular-pathway" },
   { id: "source", lane: "Evidence", title: "Approved source section", detail: "A reviewed mapping and matching book section ground the teaching.", href: "/alignment" },
   { id: "compare-source", lane: "Compare", title: "Cross-book evidence", detail: "Two approved books can be compared by exact passage with cautious difference flags.", href: "/source-compare" },
   { id: "lesson", lane: "Learn", title: "Professor Mode lesson", detail: "Foundation-first explanation, notes, recall, and a sideways map.", href: "/learn/cardiovascular/cardiac-cycle" },
+  { id: "professor", lane: "Explain", title: "Adaptive Professor Mode", detail: "A Socratic teach-back targets the weakest saved mechanism and records missing links.", href: "/cardiovascular-pathway#professor-2" },
   { id: "diagnostic", lane: "Measure", title: "Starting diagnostic", detail: "Domain scores reveal what can be skipped and what needs repair.", href: "/diagnostic" },
   { id: "case", lane: "Apply", title: "Progressive clinical case", detail: "Decisions unfold one step at a time and stay inside approved scope.", href: "/cases" },
   { id: "reasoning", lane: "Connect", title: "Clinical reasoning ladder", detail: "Normal physiology connects stepwise to mechanism, presentation, testing, and management.", href: "/reasoning-ladder" },
   { id: "visual", lane: "Interpret", title: "Visual laboratory", detail: "Pressure and flow patterns train visual interpretation.", href: "/visual-lab" },
   { id: "interleave", lane: "Mix", title: "Interleaved review", detail: "Related domains alternate so the learner must choose the mechanism.", href: "/interleaved" },
+  { id: "progress-test", lane: "Retest", title: "Cumulative progress test", detail: "Old and new foundations return after a risk-adjusted delay.", href: "/cardiovascular-pathway#progress-test" },
   { id: "viva", lane: "Explain", title: "Oral viva", detail: "Spoken or typed explanations expose missing concept links.", href: "/viva" },
   { id: "confidence", lane: "Calibrate", title: "Confidence calibration", detail: "Accuracy and certainty reveal hidden high-confidence errors.", href: "/confidence" },
   { id: "blueprint", lane: "Plan", title: "Exam blueprint", detail: "Syllabus objectives connect to MCQ, SAQ, OSCE, and viva lanes.", href: "/exam-blueprint" },

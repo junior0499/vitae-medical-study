@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { learningActivityAttempts, mistakeNotebook } from "@/db/schema";
 
-export type LearningActivityType = "diagnostic" | "clinical_case" | "visual_lab" | "oral_viva" | "interleaved_review";
+export type LearningActivityType = "diagnostic" | "clinical_case" | "visual_lab" | "oral_viva" | "interleaved_review" | "professor_dialogue" | "cumulative_progress_test";
 
 export type ScoredLearningItem = {
   id: string;
@@ -120,4 +120,57 @@ export async function saveVivaAttempt(input: {
       .onConflictDoUpdate({ target: [mistakeNotebook.ownerId, mistakeNotebook.assessmentId, mistakeNotebook.questionKey], set: values });
   }
   return { attemptId, correctCount, totalCount: input.results.length, results: input.results, completedAt };
+}
+
+export async function saveProfessorAttempt(input: {
+  ownerId: string;
+  promptId: string;
+  lessonSlug: string;
+  prompt: string;
+  response: string;
+  confidence: "low" | "medium" | "high";
+  hintLevel: number;
+  score: number;
+  correct: boolean;
+  matched: string[];
+  missing: string[];
+  modelAnswer: string;
+  sourceLabel: string;
+}) {
+  const completedAt = new Date().toISOString();
+  const attemptId = crypto.randomUUID();
+  await getDb().insert(learningActivityAttempts).values({
+    id: attemptId,
+    ownerId: input.ownerId,
+    activityType: "professor_dialogue",
+    activityId: input.promptId,
+    subject: "Internal Medicine I",
+    system: "Cardiovascular",
+    correctCount: input.correct ? 1 : 0,
+    totalCount: 1,
+    detailsJson: JSON.stringify({ promptId: input.promptId, lessonSlug: input.lessonSlug, response: input.response, confidence: input.confidence, hintLevel: input.hintLevel, score: input.score, matched: input.matched, missing: input.missing }),
+    completedAt,
+  });
+
+  const assessmentId = `professor_dialogue:${input.promptId}`;
+  if (input.correct) {
+    await getDb().update(mistakeNotebook).set({ status: "resolved", updatedAt: completedAt })
+      .where(and(eq(mistakeNotebook.ownerId, input.ownerId), eq(mistakeNotebook.assessmentId, assessmentId), eq(mistakeNotebook.questionKey, input.promptId)));
+  } else {
+    const values = {
+      subject: "Internal Medicine I",
+      lessonSlug: input.lessonSlug,
+      prompt: input.prompt,
+      originalAnswer: input.response,
+      correctedConcept: input.modelAnswer,
+      reason: input.missing.length ? `Missing links: ${input.missing.join(", ")}` : "The explanation needs another retrieval attempt.",
+      sourceLabel: input.sourceLabel,
+      status: "open",
+      nextReviewAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: completedAt,
+    };
+    await getDb().insert(mistakeNotebook).values({ id: crypto.randomUUID(), ownerId: input.ownerId, assessmentId, questionKey: input.promptId, ...values, createdAt: completedAt })
+      .onConflictDoUpdate({ target: [mistakeNotebook.ownerId, mistakeNotebook.assessmentId, mistakeNotebook.questionKey], set: values });
+  }
+  return { attemptId, score: input.score, correct: input.correct, matched: input.matched, missing: input.missing, completedAt };
 }

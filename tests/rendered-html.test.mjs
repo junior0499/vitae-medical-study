@@ -206,7 +206,7 @@ test("declares durable learning, adaptive application, correction, map, review, 
   assert.match(mindMapRouteText, /nodesJson/);
   assert.match(masteryRouteText, /calculateMastery/);
   assert.match(serviceWorkerText, /CACHE_TRAVEL_PACK/);
-  assert.match(serviceWorkerText, /poh-tah-toh-travel-v8/);
+  assert.match(serviceWorkerText, /poh-tah-toh-travel-v9/);
   assert.match(manifestText, /Poh-tah-toh Medical Study Companion/);
   assert.match(manifestText, /cat-icon-512\.png/);
   assert.match(lessonSourceRegistryText, /foundation-03/);
@@ -255,6 +255,37 @@ test("renders oral viva, comparison, interleaving, confidence, and exam-blueprin
   assert.match(engineApi, /Hidden certainty risk/);
 });
 
+test("renders the gold-standard cardiovascular pathway, adaptive professor, prerequisite graph, and cumulative testing", async () => {
+  const response = await render("/cardiovascular-pathway");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /One subject/);
+  assert.match(html, /The complete learning loop/);
+  assert.match(html, /Foundation.*objective.*clinical performance/s);
+  assert.match(html, /Adaptive Professor Mode 2\.0/);
+  assert.match(html, /Old knowledge stays in the room/);
+  assert.match(html, /12.*syllabus objectives/s);
+  assert.match(html, /Nothing clinical unlocks by guesswork/);
+
+  const [api, pathway, attempts, engine, offlinePacks] = await Promise.all([
+    readFile(new URL("../app/api/cardiovascular-pathway/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/cardiovascular-pathway.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/learning-attempts.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/learning-engine/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/offline-packs.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(api, /promptRisk/);
+  assert.match(api, /nextTestAt/);
+  assert.match(api, /source_gate/);
+  assert.match(pathway, /cardiovascularPathwayNodes/);
+  assert.match(pathway, /scoreProfessorResponse/);
+  assert.match(pathway, /tier: "repair" \| "retention" \| "transfer"/);
+  assert.match(attempts, /professor_dialogue/);
+  assert.match(attempts, /cumulative_progress_test/);
+  assert.match(engine, /Prove retention/);
+  assert.match(offlinePacks, /cardiovascular-pathway/);
+});
+
 test("renders approved-source search, recoverable history, and private backup", async () => {
   const [toolsResponse, searchResponse, historyResponse, backupResponse] = await Promise.all([
     render("/study-tools"),
@@ -297,7 +328,7 @@ test("renders approved-source search, recoverable history, and private backup", 
   assert.match(backupApi, /delete safe\.objectKey/);
   assert.match(backupApi, /content-disposition/);
   assert.match(masteryCalculation, /assessmentComponent/);
-  assert.match(serviceWorker, /poh-tah-toh-travel-v8/);
+  assert.match(serviceWorker, /poh-tah-toh-travel-v9/);
   assert.match(serviceWorker, /CACHE_TRAVEL_PACK/);
 });
 

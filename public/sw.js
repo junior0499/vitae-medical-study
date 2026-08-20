@@ -1,4 +1,4 @@
-const CACHE_NAME = "poh-tah-toh-travel-v8";
+const CACHE_NAME = "poh-tah-toh-travel-v9";
 const APP_SHELL = ["/", "/offline", "/study-tools"];
 
 self.addEventListener("install", (event) => {

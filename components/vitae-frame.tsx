@@ -13,7 +13,7 @@ const navItems: Array<{ id: string; href: string; icon: string; label: string; b
   { id: "overview", href: "/", icon: "⌂", label: "Overview" },
   { id: "today", href: "/today", icon: "◷", label: "Today" },
   { id: "learn", href: "/learn", icon: "◎", label: "Learn" },
-  { id: "path", href: "/learning-graph", icon: "⌘", label: "Study path" },
+  { id: "path", href: "/cardiovascular-pathway", icon: "⌘", label: "Study path" },
   { id: "practice", href: "/practice", icon: "✦", label: "Practice" },
   { id: "coverage", href: "/coverage", icon: "◫", label: "Coverage" },
   { id: "alignment", href: "/alignment", icon: "⌁", label: "Source map" },
