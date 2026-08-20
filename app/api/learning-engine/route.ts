@@ -34,6 +34,7 @@ export async function GET(request: Request) {
     const professorDialogues = activities.filter((item) => item.activityType === "professor_dialogue");
     const cumulativeTests = activities.filter((item) => item.activityType === "cumulative_progress_test");
     const vivas = activities.filter((item) => item.activityType === "oral_viva");
+    const voiceTeachBacks = activities.filter((item) => item.activityType === "voice_teach_back");
     const highConfidenceWrong = interleaved.reduce((count, item) => {
       const details = parseDetails(item.detailsJson);
       return count + (details.results ?? []).filter((result) => !result.correct && details.confidence?.[result.questionId] === "high").length;
@@ -65,6 +66,7 @@ export async function GET(request: Request) {
     else if (dueEvidence.length) recommendation = { kind: "freshness", eyebrow: "Evidence check is due", title: `Review ${dueEvidence.length} source ${dueEvidence.length === 1 ? "scope" : "scopes"}`, reason: "A superseded or due source should be inspected before it supports more clinical learning.", href: "/evidence-governance", action: "Review evidence" };
     else if (questionReviews.length) recommendation = { kind: "question-quality", eyebrow: "Item review is waiting", title: `Inspect ${questionReviews.length} marked ${questionReviews.length === 1 ? "question" : "questions"}`, reason: "These questions were individually marked for review and should be resolved before expanding the bank.", href: "/question-quality", action: "Open quality lab" };
     else if (!vivas.length) recommendation = { kind: "viva", eyebrow: "Explain without options", title: "Take the cardiovascular oral viva", reason: "Your recognition evidence is ready to be tested as a spoken or typed mechanism explanation.", href: "/viva", action: "Start oral viva" };
+    else if (!voiceTeachBacks.length) recommendation = { kind: "voice", eyebrow: "Repair the spoken chain", title: "Complete a focused voice teach-back", reason: "Your broad viva is saved. Now explain one causal chain and let each missing reasoning link enter targeted correction.", href: "/voice-teach-back", action: "Teach it back" };
     else recommendation = { kind: "assessment", eyebrow: "Integrate and verify", title: "Take the timed cardiovascular check", reason: "Diagnostic, lesson, case, and visual evidence are present. A timed assessment is the next integration step.", href: "/assessment", action: "Start assessment" };
 
     const graph = learningGraph.map((node) => ({
@@ -80,13 +82,15 @@ export async function GET(request: Request) {
         : node.id === "interleave" ? (interleaved.length ? "evidence" : "ready")
         : node.id === "progress-test" ? (cumulativeTests.length ? "evidence" : "ready")
         : node.id === "viva" ? (vivas.length ? "evidence" : "ready")
+        : node.id === "voice" ? (voiceTeachBacks.length ? "evidence" : "ready")
         : node.id === "confidence" ? (interleaved.length ? (highConfidenceWrong ? "active" : "evidence") : "ready")
         : node.id === "blueprint" ? "ready"
         : node.id === "correction" ? (openMistakes.length || reviews.length ? "active" : "ready")
         : node.id === "question-quality" ? (questionReviews.length ? "active" : qualityReviews.length ? "evidence" : "ready")
         : node.id === "freshness" ? (dueEvidence.length ? "active" : freshnessReviews.length ? "evidence" : "ready")
-        : node.id === "mastery" ? "active" : "mapped",
+        : node.id === "mastery" ? "active"
+        : node.id === "outcomes" ? (activities.length ? "evidence" : "ready") : "mapped",
     }));
-    return Response.json({ recommendation, graph, evidence: { diagnostics: diagnostics.length, cases: cases.length, encounters: encounters.length, visuals: visuals.length, interleaved: interleaved.length, professorDialogues: professorDialogues.length, cumulativeTests: cumulativeTests.length, vivas: vivas.length, highConfidenceWrong, openMistakes: openMistakes.length, dueReviews: dueReviews.length, dueEvidence: dueEvidence.length, questionReviews: questionReviews.length, sourceDocuments: documents.length, approvedMappings: alignments.filter((item) => item.decision === "approved").length }, latestDiagnostic: latestDiagnostic ? { score: Math.round(latestDiagnostic.correctCount / latestDiagnostic.totalCount * 100), domainScores: scores, completedAt: latestDiagnostic.completedAt } : null });
+    return Response.json({ recommendation, graph, evidence: { diagnostics: diagnostics.length, cases: cases.length, encounters: encounters.length, visuals: visuals.length, interleaved: interleaved.length, professorDialogues: professorDialogues.length, cumulativeTests: cumulativeTests.length, vivas: vivas.length, voiceTeachBacks: voiceTeachBacks.length, highConfidenceWrong, openMistakes: openMistakes.length, dueReviews: dueReviews.length, dueEvidence: dueEvidence.length, questionReviews: questionReviews.length, sourceDocuments: documents.length, approvedMappings: alignments.filter((item) => item.decision === "approved").length }, latestDiagnostic: latestDiagnostic ? { score: Math.round(latestDiagnostic.correctCount / latestDiagnostic.totalCount * 100), domainScores: scores, completedAt: latestDiagnostic.completedAt } : null });
   } catch { return Response.json({ error: "The learning engine could not calculate your next step." }, { status: 500 }); }
 }

@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { learningActivityAttempts, mistakeNotebook } from "@/db/schema";
 
-export type LearningActivityType = "diagnostic" | "clinical_case" | "clinical_encounter" | "visual_lab" | "oral_viva" | "interleaved_review" | "professor_dialogue" | "cumulative_progress_test";
+export type LearningActivityType = "diagnostic" | "clinical_case" | "clinical_encounter" | "visual_lab" | "oral_viva" | "voice_teach_back" | "interleaved_review" | "professor_dialogue" | "cumulative_progress_test";
 
 export type ScoredLearningItem = {
   id: string;

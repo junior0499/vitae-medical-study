@@ -60,6 +60,7 @@ export const learningGraph = [
   { id: "interleave", lane: "Mix", title: "Interleaved review", detail: "Related domains alternate so the learner must choose the mechanism.", href: "/interleaved" },
   { id: "progress-test", lane: "Retest", title: "Cumulative progress test", detail: "Old and new foundations return after a risk-adjusted delay.", href: "/cardiovascular-pathway#progress-test" },
   { id: "viva", lane: "Explain", title: "Oral viva", detail: "Spoken or typed explanations expose missing concept links.", href: "/viva" },
+  { id: "voice", lane: "Speak", title: "Voice teach-back", detail: "One spoken reasoning chain is checked link by link and missing steps enter focused recall.", href: "/voice-teach-back" },
   { id: "confidence", lane: "Calibrate", title: "Confidence calibration", detail: "Accuracy and certainty reveal hidden high-confidence errors.", href: "/confidence" },
   { id: "question-quality", lane: "Govern", title: "Question-quality laboratory", detail: "Personal item signals prompt individual review without pretending to be cohort psychometrics.", href: "/question-quality" },
   { id: "freshness", lane: "Refresh", title: "Evidence freshness", detail: "Editions, review dates, conflicts, and superseded sources are logged without automatic clinical rewrites.", href: "/evidence-governance" },
@@ -67,4 +68,5 @@ export const learningGraph = [
   { id: "correction", lane: "Correct", title: "Mistake and review loop", detail: "Incorrect concepts enter the notebook and scheduled recall queue.", href: "/mistakes" },
   { id: "misconception", lane: "Repair", title: "Misconception micro-lesson", detail: "Repeated errors are grouped into a short correction and retrieval reflection.", href: "/misconceptions" },
   { id: "mastery", lane: "Prove", title: "Strict mastery proof", detail: "A topic passes only after recall, explanation, application, and delayed retention.", href: "/mastery-proof" },
+  { id: "outcomes", lane: "Measure", title: "Real learning outcomes", detail: "Delayed retention, first-attempt transfer, confidence accuracy, and weak prerequisites remain visible with sample sizes.", href: "/outcomes" },
 ];

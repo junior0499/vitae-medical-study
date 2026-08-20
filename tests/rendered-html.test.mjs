@@ -307,7 +307,7 @@ test("renders the clinical encounter, question-quality lab, strict mastery proof
   assert.match(masteryHtml, /Recall.*Explain.*Apply.*Retain/s);
   assert.match(freshnessHtml, /Know when the source/);
   assert.match(freshnessHtml, /never silently rewrite a clinical claim/);
-  assert.match(toolsHtml, /Features 23–48/);
+  assert.match(toolsHtml, /Features 23–50/);
   assert.match(toolsHtml, /Clinical encounter simulator/);
   assert.match(toolsHtml, /Evidence freshness/);
 
@@ -334,6 +334,53 @@ test("renders the clinical encounter, question-quality lab, strict mastery proof
   assert.match(backupText, /schemaVersion: 4/);
   assert.match(backupText, /questionQualityReviews/);
   assert.match(backupText, /evidenceFreshnessReviews/);
+});
+
+test("renders voice teach-back, targeted reasoning correction, and real learning outcomes", async () => {
+  const [voiceResponse, outcomesResponse, toolsResponse, learnResponse] = await Promise.all([
+    render("/voice-teach-back"),
+    render("/outcomes"),
+    render("/study-tools"),
+    render("/learn"),
+  ]);
+  for (const response of [voiceResponse, outcomesResponse, toolsResponse, learnResponse]) assert.equal(response.status, 200);
+  const [voiceHtml, outcomesHtml, toolsHtml, learnHtml] = await Promise.all([
+    voiceResponse.text(), outcomesResponse.text(), toolsResponse.text(), learnResponse.text(),
+  ]);
+  assert.match(voiceHtml, /Teach it back/);
+  assert.match(voiceHtml, /missing link/);
+  assert.match(voiceHtml, /Concept matching supports reflection/);
+  assert.match(voiceHtml, /Stop at the evidence boundary/);
+  assert.match(outcomesHtml, /Measure what still/);
+  assert.match(outcomesHtml, /7-, 30-, and 90-day retention/);
+  assert.match(outcomesHtml, /Unfamiliar-case performance/);
+  assert.match(outcomesHtml, /No delayed evidence yet/);
+  assert.match(toolsHtml, /Features 23–50/);
+  assert.match(toolsHtml, /Voice viva and teach-back/);
+  assert.match(toolsHtml, /Real learning outcomes/);
+  assert.match(learnHtml, /Voice teach-back/);
+  assert.match(learnHtml, /Learning outcomes/);
+
+  const [voiceApi, voiceLibrary, outcomesApi, outcomesLibrary, masteryProof, engineApi, offlinePacks] = await Promise.all([
+    readFile(new URL("../app/api/voice-teach-back/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/voice-teach-back.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/outcomes/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/learning-outcomes.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/mastery-proof.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/learning-engine/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/offline-packs.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(voiceApi, /voice_teach_back/);
+  assert.match(voiceApi, /recallReviews/);
+  assert.match(voiceApi, /Missing reasoning links/);
+  assert.match(voiceLibrary, /sourceState: "locked"/);
+  assert.match(outcomesApi, /calculateLearningOutcomes/);
+  assert.match(outcomesLibrary, /\[7, 30, 90\]/);
+  assert.match(outcomesLibrary, /Only the first saved attempt/);
+  assert.match(masteryProof, /voice_teach_back/);
+  assert.match(engineApi, /focused voice teach-back/i);
+  assert.match(offlinePacks, /voice-teach-back/);
+  assert.match(offlinePacks, /outcomes/);
 });
 
 test("renders approved-source search, recoverable history, and private backup", async () => {
